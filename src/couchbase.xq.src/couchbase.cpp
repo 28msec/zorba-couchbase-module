@@ -21,8 +21,11 @@
 #include <zorba/user_exception.h>
 #include <stdio.h>
 
-#include "couchbase.h"
+#include <zorba/util/uuid.h>
+
+
 #include <libcouchbase/couchbase.h>
+#include "couchbase.h"
 
 namespace zorba { namespace couchbase {
 
@@ -42,6 +45,27 @@ zorba::ExternalFunction*
     {
       lFunc = new ConnectFunction(this);
     }
+    if (localname == "find")
+    {
+      lFunc = new FindFunction(this);
+    }
+    if (localname == "remove")
+    {
+      lFunc = new RemoveFunction(this);
+    }
+    if (localname == "save")
+    {
+      lFunc = new SaveFunction(this);
+    }
+    if (localname == "flush")
+    {
+      lFunc = new FlushFunction(this);
+    }
+    if (localname == "touch")
+    {
+      lFunc = new TouchFunction(this);
+    }
+
   }
 
   return lFunc;
@@ -120,8 +144,70 @@ CouchbaseFunction::throwError(const char *aLocalName, const char* aErrorMessage)
   throw USER_EXCEPTION(errQName, errDescription);
 }
 
+libcouchbase_t
+CouchbaseFunction::getInstance(const DynamicContext* aDctx, const String& aIdent) const
+{
+  InstanceMap* lInstanceMap;
+  if (!(lInstanceMap = dynamic_cast<InstanceMap*>(aDctx->getExternalFunctionParameter("couchbaseInstanceMap"))))
+  {
+    throwError("NoInstanceMatch", "No instance of couchbase with the given identifier was found.");
+  }
+
+  libcouchbase_t lInstance;
+  if(!(lInstance = lInstanceMap->getInstance(aIdent)))
+  {
+    throwError("NoInstanceMatch", "No instance of couchbase with the given identifier was found.");
+  }
+
+  return lInstance;
+}
 /*******************************************************************************
  ******************************************************************************/
+
+InstanceMap::InstanceMap()
+{   
+  InstanceMap::instanceMap = new InstanceMap_t();
+}
+
+bool
+InstanceMap::storeInstance(const String& aKeyName, libcouchbase_t aInstance)
+{
+  std::pair<InstanceMap_t::iterator, bool> ret;
+  ret = instanceMap->insert(std::pair<String, libcouchbase_t>(aKeyName, aInstance));
+  return ret.second;
+}
+
+libcouchbase_t
+InstanceMap::getInstance(const String& aKeyName)
+{
+  InstanceMap::InstanceMap_t::iterator lIter = instanceMap->find(aKeyName);
+  
+  if (lIter == instanceMap->end())
+    return NULL;
+  
+  libcouchbase_t lInstance = lIter->second;
+
+  return lInstance;
+}
+
+bool
+InstanceMap::deleteInstance(const String& aKeyName)
+{
+  InstanceMap::InstanceMap_t::iterator lIter = instanceMap->find(aKeyName);
+
+  if (lIter == instanceMap->end())
+    return false;
+
+  libcouchbase_destroy(lIter->second);
+
+  instanceMap->erase(lIter);
+
+  return true;
+}
+
+/*******************************************************************************
+ ******************************************************************************/
+
 static void error_callback(
   libcouchbase_t instance,
   libcouchbase_error_t error,
@@ -144,52 +230,88 @@ static void get_callback(
   std::cout << "get callback recieved : "<<str<<std::endl;
 }
 
-
 zorba::ItemSequence_t
 ConnectFunction::evaluate(
   const Arguments_t& aArgs,
   const zorba::StaticContext* aSctx,
   const zorba::DynamicContext* aDctx) const
 {
-  libcouchbase_t instance; // libcouchbase instance
-  libcouchbase_error_t oprc; // for checking responses
+  DynamicContext* lDctx = const_cast<DynamicContext*>(aDctx);
 
-  //TODO: make modificable
-  const char *host = "localhost:8091";
-  const char *username = NULL;
-  const char *passwd = NULL;
-  const char *bucket = "default";
+  InstanceMap* lInstanceMap;
+  if (!(lInstanceMap = dynamic_cast<InstanceMap*>(lDctx->getExternalFunctionParameter("couchbaseInstanceMap"))))
+  {
+    lInstanceMap = new InstanceMap();
+    lDctx->addExternalFunctionParameter("couchbaseInstanceMap", lInstanceMap);
+  }
 
-  instance = libcouchbase_create(host, username, passwd, bucket, NULL);
+  const char *host;
+  const char *username;
+  const char *password;
+  const char *bucket;
+  if (aArgs.size() > 1)
+  {
+    host = CouchbaseFunction::getOneStringArgument(aArgs, 0).c_str();
+    username = CouchbaseFunction::getOneStringArgument(aArgs, 1).c_str();
+    password = CouchbaseFunction::getOneStringArgument(aArgs, 2).c_str();
+    bucket = CouchbaseFunction::getOneStringArgument(aArgs, 3).c_str();
+  }
+  else
+  {
+    //TODO: read json
+    host = "localhost:8091";
+    username = NULL;
+    password = NULL;
+    bucket = "default";
+  }
+  
+  libcouchbase_t lInstance; // libcouchbase instance
+  //libcouchbase_error_t oprc; // for checking responses
 
-  if (instance == NULL)
+  lInstance = libcouchbase_create(host, username, password, bucket, NULL);
+
+  if (lInstance == NULL)
   {
     throwError("LibcouchbaseError", "Failed to create libcouchbase instance");
   }
   
-  (void)libcouchbase_set_error_callback(instance, error_callback);
-  (void)libcouchbase_set_get_callback(instance, get_callback);
+  //set callbacks
+  (void)libcouchbase_set_error_callback(lInstance, error_callback);
+  (void)libcouchbase_set_get_callback(lInstance, get_callback);
 
-  if (libcouchbase_connect(instance) != LIBCOUCHBASE_SUCCESS) 
+  if (libcouchbase_connect(lInstance) != LIBCOUCHBASE_SUCCESS) 
   {
     throwError("LibcouchbaseError", "Failed to connect libcouchbase instance to server");
   }
 
-  libcouchbase_wait(instance);
+  libcouchbase_wait(lInstance);
+  
+  uuid lUUID;
+  uuid::create(&lUUID);
+  
+  std::stringstream lStream;
+  lStream << lUUID;
 
+  String lStrUUID = lStream.str();
+
+  lInstanceMap->storeInstance(lStrUUID, lInstance);
+
+  return ItemSequence_t(new SingletonItemSequence(CouchbaseModule::getItemFactory()->createAnyURI(lStrUUID)));   
+
+  /*
   char* key ="hello2";
   char *doc ="{\"message\":\"world\"}";
 
   oprc = libcouchbase_store(instance,
                               NULL,
                               LIBCOUCHBASE_SET,
-                              key, /* the key or _id of the document */
-                              strlen(key), /* the key length */
+                              key, // the key or _id of the document
+                              strlen(key), // the key length 
                               doc,
-                              strlen(doc), /* length of */
-                              0,  /* flags,  */
-                              0,  /* expiration */
-                              0); /* and CAS values, see API reference */
+                              strlen(doc), // length of
+                              0,  // flags,  
+                              0,  // expiration 
+                              0); // and CAS values, see API reference 
   
   if (oprc != LIBCOUCHBASE_SUCCESS)
   {
@@ -226,11 +348,115 @@ ConnectFunction::evaluate(
   }
 
   libcouchbase_wait(instance);
-
-
-  return ItemSequence_t(new SingletonItemSequence(CouchbaseModule::getItemFactory()->createString("test")));
+  */
 }
 
+/*******************************************************************************
+ ******************************************************************************/
+
+zorba::ItemSequence_t
+FindFunction::evaluate(
+  const Arguments_t& aArgs,
+  const zorba::StaticContext* aSctx,
+  const zorba::DynamicContext* aDctx) const
+{
+  throwError("couchbaseError", "Function not Implemented.");
+  return ItemSequence_t(new EmptySequence());  
+}
+
+/*******************************************************************************
+ ******************************************************************************/
+
+zorba::ItemSequence_t
+RemoveFunction::evaluate(
+  const Arguments_t& aArgs,
+  const zorba::StaticContext* aSctx,
+  const zorba::DynamicContext* aDctx) const
+{
+  throwError("couchbaseError", "Function not Implemented.");
+  return ItemSequence_t(new EmptySequence());  
+}
+
+/*******************************************************************************
+ ******************************************************************************/
+
+zorba::ItemSequence_t
+SaveFunction::evaluate(
+  const Arguments_t& aArgs,
+  const zorba::StaticContext* aSctx,
+  const zorba::DynamicContext* aDctx) const
+{
+  String lInstanceID = CouchbaseFunction::getOneStringArgument(aArgs, 0);
+  
+  libcouchbase_t lInstance = getInstance(aDctx, lInstanceID);
+  libcouchbase_error_t oprc;
+
+  char* key = CouchbaseFunction::getOneStrinArgument(aArgs, 1);
+
+
+ /*
+  char* key ="hello2";
+  char *doc ="{\"message\":\"world\"}";
+
+  oprc = libcouchbase_store(instance,
+                              NULL,
+                              LIBCOUCHBASE_SET,
+                              key, // the key or _id of the document
+                              strlen(key), // the key length 
+                              doc,
+                              strlen(doc), // length of
+                              0,  // flags,  
+                              0,  // expiration 
+                              0); // and CAS values, see API reference 
+  
+  if (oprc != LIBCOUCHBASE_SUCCESS)
+  {
+    throwError("LibcouchbaseError", "Failed to create store operation");
+  }
+
+  
+  libcouchbase_wait(instance);
+
+  oprc = libcouchbase_get_last_error(instance);
+  if (oprc == LIBCOUCHBASE_SUCCESS)
+  {
+    std::cout << "success";
+  }
+  else
+  {
+    throwError("LibcouchbaseError", "Could not set key.");
+  }
+  */
+
+  throwError("couchbaseError", "Function not Implemented.");
+  return ItemSequence_t(new EmptySequence());  
+}
+
+/*******************************************************************************
+ ******************************************************************************/
+
+zorba::ItemSequence_t
+FlushFunction::evaluate(
+  const Arguments_t& aArgs,
+  const zorba::StaticContext* aSctx,
+  const zorba::DynamicContext* aDctx) const
+{
+  throwError("couchbaseError", "Function not Implemented.");
+  return ItemSequence_t(new EmptySequence());  
+}
+
+/*******************************************************************************
+ ******************************************************************************/
+
+zorba::ItemSequence_t
+TouchFunction::evaluate(
+  const Arguments_t& aArgs,
+  const zorba::StaticContext* aSctx,
+  const zorba::DynamicContext* aDctx) const
+{
+  throwError("couchbaseError", "Function not Implemented.");
+  return ItemSequence_t(new EmptySequence());  
+}
 
 } /*namespace couchbase*/ } /*namespace zorba*/
 

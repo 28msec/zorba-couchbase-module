@@ -85,6 +85,9 @@ class CouchbaseFunction : public ContextualExternalFunction
     static void
       throwError(const char*, const char*);
 
+    libcouchbase_t
+      getInstance (const DynamicContext*, const String& aIdent) const;
+
   public:
     
     CouchbaseFunction(const CouchbaseModule* module);
@@ -94,6 +97,46 @@ class CouchbaseFunction : public ContextualExternalFunction
     virtual String
       getURI() const;
  
+};
+
+
+/*******************************************************************************
+ ******************************************************************************/
+
+class InstanceMap : public ExternalFunctionParameter
+{
+  private:
+    typedef std::map<String, libcouchbase_t> InstanceMap_t;
+    InstanceMap_t* instanceMap;
+
+  public:
+    InstanceMap();
+    
+    bool
+    storeInstance(const String&, libcouchbase_t);
+
+    libcouchbase_t
+    getInstance(const String&);
+
+    bool 
+    deleteInstance(const String&);
+
+    virtual void
+    destroy() throw()
+    {
+      if (instanceMap)
+      {
+        for (InstanceMap_t::const_iterator lIter = instanceMap->begin();
+             lIter != instanceMap->end(); ++lIter)
+        {
+          libcouchbase_destroy(lIter->second);
+        }
+        instanceMap->clear();
+        delete instanceMap;
+      }
+      delete this;
+    };
+
 };
 
 /*******************************************************************************
@@ -116,6 +159,105 @@ class ConnectFunction : public CouchbaseFunction
                 const zorba::DynamicContext*) const;
 };
 
+/*******************************************************************************
+ ******************************************************************************/
+
+class FindFunction : public CouchbaseFunction
+{
+  public:
+    FindFunction(const CouchbaseModule* aModule)
+      : CouchbaseFunction(aModule) {}
+
+    virtual ~FindFunction(){}
+
+    virtual zorba::String
+      getLocalName() const { return "find"; }
+
+    virtual zorba::ItemSequence_t
+      evaluate( const Arguments_t&,
+                const zorba::StaticContext*,
+                const zorba::DynamicContext*) const;
+};
+
+/*******************************************************************************
+ ******************************************************************************/
+
+class RemoveFunction : public CouchbaseFunction
+{
+  public:
+    RemoveFunction(const CouchbaseModule* aModule)
+      : CouchbaseFunction(aModule) {}
+
+    virtual ~RemoveFunction(){}
+
+    virtual zorba::String
+      getLocalName() const { return "remove"; }
+
+    virtual zorba::ItemSequence_t
+      evaluate( const Arguments_t&,
+                const zorba::StaticContext*,
+                const zorba::DynamicContext*) const;
+};
+
+/*******************************************************************************
+ ******************************************************************************/
+
+class SaveFunction : public CouchbaseFunction
+{
+  public:
+    SaveFunction(const CouchbaseModule* aModule)
+      : CouchbaseFunction(aModule) {}
+
+    virtual ~SaveFunction(){}
+
+    virtual zorba::String
+      getLocalName() const { return "save"; }
+
+    virtual zorba::ItemSequence_t
+      evaluate( const Arguments_t&,
+                const zorba::StaticContext*,
+                const zorba::DynamicContext*) const;
+};
+
+/*******************************************************************************
+ ******************************************************************************/
+
+class FlushFunction : public CouchbaseFunction
+{
+  public:
+    FlushFunction(const CouchbaseModule* aModule)
+      : CouchbaseFunction(aModule) {}
+
+    virtual ~FlushFunction(){}
+
+    virtual zorba::String
+      getLocalName() const { return "flush"; }
+
+    virtual zorba::ItemSequence_t
+      evaluate( const Arguments_t&,
+                const zorba::StaticContext*,
+                const zorba::DynamicContext*) const;
+};
+
+/*******************************************************************************
+ ******************************************************************************/
+
+class TouchFunction : public CouchbaseFunction
+{
+  public:
+    TouchFunction(const CouchbaseModule* aModule)
+      : CouchbaseFunction(aModule) {}
+
+    virtual ~TouchFunction(){}
+
+    virtual zorba::String
+      getLocalName() const { return "touch"; }
+
+    virtual zorba::ItemSequence_t
+      evaluate( const Arguments_t&,
+                const zorba::StaticContext*,
+                const zorba::DynamicContext*) const;
+};
 
 } /*namespace couchbase*/ } /*namespace zorba*/
 
