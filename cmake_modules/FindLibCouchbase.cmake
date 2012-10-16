@@ -22,8 +22,6 @@ FIND_PATH (
   PATHS ${LIBCOUCHBASE_INCLUDE_DIR} /usr/include/ /usr/local/include /opt/local/include )
 MARK_AS_ADVANCED (LIBCOUCHBASE_INCLUDE_DIR)
 
-MESSAGE(STATUS ">>>>>>>>>>>${LIBCOUCHBASE_INCLUDE_DIR}")
-
 FIND_LIBRARY (
   LIBCOUCHBASE_LIBRARY
   NAMES libcouchbase libcouchbase.so
