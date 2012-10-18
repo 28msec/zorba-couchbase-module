@@ -13,6 +13,6 @@ variable $instance := cb:connect({
 variable $binary := f:read-binary(resolve-uri("simple.zip"));
 cb:store-binary($instance, "archive", $binary);
 variable $binary2 := cb:find-binary($instance, "archive");
-
+cb:disconnect($instance);
 for $a in a:extract-text($binary2)
 return <text>{ $a }</text>

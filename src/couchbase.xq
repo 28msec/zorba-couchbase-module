@@ -307,6 +307,6 @@ declare function cb:touch($db as xs:anyURI, $key as xs:string, $exp-time as xs:i
  :
  :)
  
-declare function cb:destroy($db as xs:anyURI)
+declare function cb:disconnect($db as xs:anyURI)
   as empty-sequence() external; 
 

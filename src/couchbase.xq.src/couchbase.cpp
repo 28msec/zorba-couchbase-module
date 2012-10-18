@@ -87,9 +87,9 @@ zorba::ExternalFunction*
     {
       lFunc = new RemoveFunction(this);
     }
-    else if (localname == "destroy")
+    else if (localname == "disconnect")
     {
-      lFunc = new DestroyFunction(this);
+      lFunc = new DisconnectFunction(this);
     }
     else if (localname == "flush")
     {
@@ -1027,7 +1027,7 @@ TouchFunction::evaluate(
  ******************************************************************************/
 
 zorba::ItemSequence_t
-DestroyFunction::evaluate(
+DisconnectFunction::evaluate(
   const Arguments_t& aArgs,
   const zorba::StaticContext* aSctx,
   const zorba::DynamicContext* aDctx) const

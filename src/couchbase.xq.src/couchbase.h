@@ -503,16 +503,16 @@ class TouchFunction : public CouchbaseFunction
 /*******************************************************************************
  ******************************************************************************/
 
-class DestroyFunction : public CouchbaseFunction
+class DisconnectFunction : public CouchbaseFunction
 {
   public:
-    DestroyFunction(const CouchbaseModule* aModule)
+    DisconnectFunction(const CouchbaseModule* aModule)
       : CouchbaseFunction(aModule) {}
 
-    virtual ~DestroyFunction(){}
+    virtual ~DisconnectFunction(){}
 
     virtual zorba::String
-      getLocalName() const { return "destroy"; }
+      getLocalName() const { return "disconnect"; }
 
     virtual zorba::ItemSequence_t
       evaluate( const Arguments_t&,
