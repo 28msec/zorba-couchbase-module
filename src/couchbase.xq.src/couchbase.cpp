@@ -20,9 +20,12 @@
 #include <zorba/empty_sequence.h>
 #include <zorba/store_manager.h>
 #include <zorba/user_exception.h>
+#include <zorba/transcode_stream.h>
 #include <zorba/serializer.h>
 #include <zorba/vector_item_sequence.h>
 #include <stdio.h>
+#include <iostream>
+#include <algorithm>
 
 
 #include <zorba/util/uuid.h>
@@ -230,6 +233,20 @@ void
       Item lValue = aOptions.getObjectValue(lStrKey);
       theExpTime = lValue.getUnsignedIntValue();
     }
+    else if (lStrKey == "encoding")
+    {
+      Item lValue = aOptions.getObjectValue(lStrKey);
+      theEncoding = lValue.getStringValue();
+      std::transform(
+        theEncoding.begin(), theEncoding.end(),
+        theEncoding.begin(), toupper);
+      if (!transcode::is_supported(theEncoding.c_str()))
+      {
+            std::ostringstream lMsg;
+            lMsg << theEncoding << ": unsupported encoding";
+            throwError("CouchbaseModuleError", lMsg.str().c_str());
+      }
+    }
   }
   lIter->close();
 
@@ -297,6 +314,20 @@ CouchbaseFunction::StoreOptions::setOptions(Item aOptions)
     {
       Item lValue = aOptions.getObjectValue(lStrKey);
       theExpTime = lValue.getUnsignedIntValue();
+    }
+    else if (lStrKey == "encoding")
+    {
+      Item lValue = aOptions.getObjectValue(lStrKey);
+      theEncoding = lValue.getStringValue();
+      std::transform(
+        theEncoding.begin(), theEncoding.end(),
+        theEncoding.begin(), toupper);
+      if (!transcode::is_supported(theEncoding.c_str()))
+      {
+            std::ostringstream lMsg;
+            lMsg << theEncoding << ": unsupported encoding";
+            throwError("CouchbaseModuleError", lMsg.str().c_str());
+      }
     }
   }
   lIter->close();
@@ -546,8 +577,22 @@ CouchbaseFunction::FindItemSequence::get_callback(lcb_t instance, const void *co
 
   if(lType == LCB_TEXT || lType == LCB_JSON)
   {
-    const char* lData = (const char*)resp->v.v0.bytes;
-    lRes->theItem = CouchbaseModule::getItemFactory()->createString(lData);
+    String lEncoding = lRes->getEncoding();
+    String lStrValue ((const char*)resp->v.v0.bytes);
+    if (transcode::is_necessary(lEncoding.c_str()))
+    {
+      std::stringstream lStream;
+      lStream << lStrValue.c_str();
+      transcode::attach(lStream, lEncoding.c_str());
+      lRes->theItem = CouchbaseModule::getItemFactory()->createString(lStream.str());
+    }
+    else
+    {
+      lRes->theItem = CouchbaseModule::getItemFactory()->createString(lStrValue);
+    }
+
+    //const char* lData = (const char*)resp->v.v0.bytes;
+    //lRes->theItem = CouchbaseModule::getItemFactory()->createString(lData);
   }
   else if (lType == LCB_XML)
   {
@@ -735,9 +780,21 @@ void CouchbaseFunction::store (lcb_t aInstance, Iterator_t aKeys, Iterator_t aVa
     }
     else if (lStore.v.v0.datatype == LCB_TEXT)
     {
+      String lEncoding = aOptions.getEncoding();
       String lStrValue = lValue.getStringValue();
-      lData = lStrValue.c_str();
-      lLen = strlen(lData)+1;
+      if (transcode::is_necessary(lEncoding.c_str()))
+      {
+        std::stringstream lStream;
+        lStream << lStrValue.c_str();
+        transcode::attach(lStream, lEncoding.c_str());
+        lData = lStream.str().c_str();
+        lLen = strlen(lData)+1;
+      }
+      else
+      {
+        lData = lStrValue.c_str();
+        lLen = strlen(lData)+1;
+      }
     }
     else if (lStore.v.v0.datatype == LCB_XML)
     {

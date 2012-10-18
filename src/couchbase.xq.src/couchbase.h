@@ -91,6 +91,7 @@ class CouchbaseFunction : public ContextualExternalFunction
       protected:
         lcb_storage_type_t theType;
         unsigned int theExpTime;
+        String theEncoding;
 
       public:
         Item theItem;
@@ -107,6 +108,8 @@ class CouchbaseFunction : public ContextualExternalFunction
 
         unsigned int getExpTime() { return theExpTime; }
 
+        String getEncoding() { return theEncoding; }
+
     };
 
     class StoreOptions
@@ -116,6 +119,7 @@ class CouchbaseFunction : public ContextualExternalFunction
         lcb_storage_t theOperation;
         lcb_storage_type_t theType;
         unsigned int theExpTime;
+        String theEncoding;
 
       public:
 
@@ -132,6 +136,8 @@ class CouchbaseFunction : public ContextualExternalFunction
         lcb_storage_type_t getOperationType() { return theType; }
 
         unsigned int getExmpTime() { return theExpTime; }
+
+        String getEncoding() { return theEncoding; }
     };
 
     class FindItemSequence : public ItemSequence
