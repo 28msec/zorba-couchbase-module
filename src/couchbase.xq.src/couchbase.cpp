@@ -59,10 +59,6 @@ zorba::ExternalFunction*
     {
       lFunc = new FindTextFunction(this);
     }
-    else if (localname == "find-xml")
-    {
-      lFunc = new FindXmlFunction(this);
-    }
     else if (localname == "find-binary")
     {
       lFunc = new FindBinaryFunction(this);
@@ -691,28 +687,6 @@ FindTextFunction::evaluate(
   lcb_t lInstance = getInstance(aDctx, lInstanceID);
   Iterator_t lKeys = getIterArgument(aArgs, 1);
   FindOptions lOptions(LCB_TEXT);
-  if (aArgs.size() > 2)
-  {
-    Item lOptionsArg = getOneItemArgument(aArgs, 2);
-    lOptions.setOptions(lOptionsArg);
-  }
- 
-  return ItemSequence_t(new FindItemSequence(lInstance,lKeys, lOptions));   
-}
-
-/*******************************************************************************
- ******************************************************************************/
-
-zorba::ItemSequence_t
-FindXmlFunction::evaluate(
-  const Arguments_t& aArgs,
-  const zorba::StaticContext* aSctx,
-  const zorba::DynamicContext* aDctx) const
-{
-  String lInstanceID = getOneStringArgument(aArgs, 0);
-  lcb_t lInstance = getInstance(aDctx, lInstanceID);
-  Iterator_t lKeys = getIterArgument(aArgs, 1);
-  FindOptions lOptions(LCB_XML);
   if (aArgs.size() > 2)
   {
     Item lOptionsArg = getOneItemArgument(aArgs, 2);

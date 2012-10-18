@@ -313,31 +313,6 @@ class FindTextFunction : public CouchbaseFunction
 /*******************************************************************************
  ******************************************************************************/
 
-class FindXmlFunction : public CouchbaseFunction
-{
-  public:
-    FindXmlFunction(const CouchbaseModule* aModule)
-      : CouchbaseFunction(aModule) 
-    {
-    }
-
-    virtual ~FindXmlFunction(){}
-
-    virtual zorba::String
-      getLocalName() const { return "find-xml"; }
-
-    virtual zorba::ItemSequence_t
-      evaluate( const Arguments_t&,
-                const zorba::StaticContext*,
-                const zorba::DynamicContext*) const;
-
-    static void get_callback(lcb_t instance, const void *cookie, lcb_error_t error, const lcb_get_resp_t *resp);
-    static std::vector<Item> theVectorItem;
-};
-
-/*******************************************************************************
- ******************************************************************************/
-
 class FindBinaryFunction : public CouchbaseFunction
 {
   public:
