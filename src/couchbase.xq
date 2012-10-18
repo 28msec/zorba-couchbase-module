@@ -65,69 +65,6 @@ declare function cb:find-text($db as xs:anyURI, $key as xs:string*)
 declare function cb:find-text($db as xs:anyURI, $key as xs:string*, $options as object())
     as xs:string* external;
 
-(:~
- : Get Value of the corresponding key as json
- : 
- : @param $db variable holding the xs:anyURI of a connected 
- :        couchbase instance
- : @param $key the identifier's of the asked value
- :
- : @return A sequence of json objects to the corresponding to the key
- :)
-
-declare function cb:find-json($db as xs:anyURI, $key as xs:string*)
-    as object()*
-{
-  jn:parse-json(cb:find-text($db, $key))
-};
-
-(:~
- : Get Value of the corresponding key as json
- : 
- : @param $db variable holding the xs:anyURI of a connected 
- :        couchbase instance
- : @param $key the identifier's of the asked value
- : @param $options json object with aditional options
- :  Example:
- :    { "expiration-time" : 60 } (expiration time value is in seconds)
- :
- : @return A sequence of json objects to the corresponding to the key
- :)
-
-declare function cb:find-json($db as xs:anyURI, $key as xs:string*, $options as object())
-    as object()*
-{
-  jn:parse-json(cb:find-text($db, $key, $options))
-};
-
-(:~
- : Get Value of the corresponding key as xml
- : 
- : @param $db variable holding the xs:anyURI of a connected 
- :        couchbase instance
- : @param $key the identifier's of the asked value
- :
- : @return A sequence of xml elements to the corresponding to the key
- :)
-
-declare function cb:find-xml($db as xs:anyURI, $key as xs:string*)
-    as element()* external;
-
-(:~
- : Get Value of the corresponding key as xml
- : 
- : @param $db variable holding the xs:anyURI of a connected 
- :        couchbase instance
- : @param $key the identifier's of the asked value
- : @param $options json object with aditional options
- :  Example:
- :    { "expiration-time" : 60 } (expiration time value is in seconds)
- :
- : @return A sequence of xml elements to the corresponding to the key
- :)
-
-declare function cb:find-xml($db as xs:anyURI, $key as xs:string*, $options as object())
-    as element()* external;
 
 (:~
  : Get Value of the corresponding key as base64binary

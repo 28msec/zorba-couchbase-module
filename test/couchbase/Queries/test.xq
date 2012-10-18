@@ -7,7 +7,7 @@ variable $instance := cb:connect({
   "bucket" : "default"});
 
 cb:store-text($instance, "key1", "!@EASD@#$ADQAW!@", {"encoding" : "ISO-8859-1"});
-variable $result := cb:find-text($instance, "key1", { "expiration-time" : 2 , "encoding" : "EUC-JP" });
+variable $result := cb:find-text($instance, "key1", { "expiration-time" : 2 });
 cb:destroy($instance);
 $result
 

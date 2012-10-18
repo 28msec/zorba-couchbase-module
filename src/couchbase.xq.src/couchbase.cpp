@@ -577,9 +577,12 @@ CouchbaseFunction::FindItemSequence::get_callback(lcb_t instance, const void *co
 
   if(lType == LCB_TEXT || lType == LCB_JSON)
   {
+    char lData[resp->v.v0.nbytes+1];
+    lData[resp->v.v0.nbytes] = 0;
+    memcpy(lData, resp->v.v0.bytes, resp->v.v0.nbytes);
     String lEncoding = lRes->getEncoding();
-    String lStrValue ((const char*)resp->v.v0.bytes);
-    if (transcode::is_necessary(lEncoding.c_str()))
+    String lStrValue (lData);
+    if (lEncoding != "" && transcode::is_necessary(lEncoding.c_str()))
     {
       std::stringstream lStream;
       lStream << lStrValue.c_str();
@@ -596,7 +599,7 @@ CouchbaseFunction::FindItemSequence::get_callback(lcb_t instance, const void *co
   }
   else if (lType == LCB_XML)
   {
-    const char* lData = (const char*)resp->v.v0.bytes;
+    const unsigned char* lData = (const unsigned char*)resp->v.v0.bytes;
     std::stringstream lStream;
     lStream << lData;
     Item lDoc = CouchbaseModule::getXmlDataManager()->parseXML(lStream);
@@ -609,9 +612,10 @@ CouchbaseFunction::FindItemSequence::get_callback(lcb_t instance, const void *co
   }
   else if (lType == LCB_BASE64)
   {
-    const char* lData = (const char*)resp->v.v0.bytes;
+    unsigned char lData[resp->v.v0.nbytes];
     size_t lLen = resp->v.v0.nbytes;
-    lRes->theItem = CouchbaseModule::getItemFactory()->createBase64Binary(lData, lLen);
+    memcpy(lData, resp->v.v0.bytes, lLen);
+    lRes->theItem = CouchbaseModule::getItemFactory()->createBase64Binary(&lData[0], lLen);
   }
   else
   {
@@ -659,9 +663,8 @@ CouchbaseFunction::FindItemSequence::FindIterator::next(Item& aItem)
       lErrorMessage << "Error finding key \"" << lStrKey  << "\" : " <<  lcb_strerror(theInstance, theError);
       throwError("LibCouchbaseError", lErrorMessage.str().c_str());
     } 
-    
     lcb_wait(theInstance);
-
+    
     if (lValue->theItem.isNull())
       return false;
 
@@ -782,7 +785,7 @@ void CouchbaseFunction::store (lcb_t aInstance, Iterator_t aKeys, Iterator_t aVa
     {
       String lEncoding = aOptions.getEncoding();
       String lStrValue = lValue.getStringValue();
-      if (transcode::is_necessary(lEncoding.c_str()))
+      if (lEncoding != "" && transcode::is_necessary(lEncoding.c_str()))
       {
         std::stringstream lStream;
         lStream << lStrValue.c_str();
@@ -809,7 +812,7 @@ void CouchbaseFunction::store (lcb_t aInstance, Iterator_t aKeys, Iterator_t aVa
     }
     else if (lStore.v.v0.datatype == LCB_BASE64)
     {
-      lData = const_cast<char*>(lValue.getBase64BinaryValue(lLen));
+      lData = lValue.getBase64BinaryValue(lLen);
     }
     else
     {

@@ -96,7 +96,7 @@ class CouchbaseFunction : public ContextualExternalFunction
       public:
         Item theItem;
 
-        FindOptions() : theType(LCB_JSON), theExpTime(0) {}
+        FindOptions() : theType(LCB_JSON), theExpTime(0), theEncoding("") {}
 
         FindOptions(lcb_storage_type_t aType) : theType(aType), theExpTime(0) {} 
 
@@ -123,7 +123,7 @@ class CouchbaseFunction : public ContextualExternalFunction
 
       public:
 
-        StoreOptions() : theOperation(LCB_ADD), theType(LCB_JSON), theExpTime(0) { }
+        StoreOptions() : theOperation(LCB_ADD), theType(LCB_JSON), theExpTime(0), theEncoding("") { }
 
         StoreOptions(lcb_storage_type_t aType) : theOperation(LCB_SET), theType(aType), theExpTime(0) { }
 
