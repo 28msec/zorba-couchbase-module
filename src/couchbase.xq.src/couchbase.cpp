@@ -67,14 +67,6 @@ zorba::ExternalFunction*
     {
       lFunc = new StoreTextFunction(this);
     }
-    else if (localname == "store-json")
-    {
-      lFunc = new StoreJsonFunction(this);
-    }
-    else if (localname == "store-xml")
-    {
-      lFunc = new StoreXmlFunction(this);
-    }
     else if (localname == "store-binary")
     {
       lFunc = new StoreBinaryFunction(this);
@@ -839,56 +831,6 @@ StoreTextFunction::evaluate(
   Iterator_t lValues = getIterArgument(aArgs, 2);
   
   StoreOptions lOptions(LCB_TEXT);
-  if (aArgs.size() > 3)
-  {
-    Item lOptionsArg = getOneItemArgument(aArgs, 3);
-    lOptions.setOptions(lOptionsArg);
-  }
-
-  store(lInstance, lKeys, lValues, lOptions);
-  return ItemSequence_t(new EmptySequence());  
-}
-
-/*******************************************************************************
- ******************************************************************************/
-
-zorba::ItemSequence_t
-StoreJsonFunction::evaluate(
-  const Arguments_t& aArgs,
-  const zorba::StaticContext* aSctx,
-  const zorba::DynamicContext* aDctx) const
-{
-  String lInstanceID = CouchbaseFunction::getOneStringArgument(aArgs, 0);
-  lcb_t lInstance = getInstance(aDctx, lInstanceID);
-  Iterator_t lKeys = getIterArgument(aArgs, 1);
-  Iterator_t lValues = getIterArgument(aArgs, 2);
-  
-  StoreOptions lOptions(LCB_JSON);
-  if (aArgs.size() > 3)
-  {
-    Item lOptionsArg = getOneItemArgument(aArgs, 3);
-    lOptions.setOptions(lOptionsArg);
-  }
-
-  store(lInstance, lKeys, lValues, lOptions);
-  return ItemSequence_t(new EmptySequence());  
-}
-
-/*******************************************************************************
- ******************************************************************************/
-
-zorba::ItemSequence_t
-StoreXmlFunction::evaluate(
-  const Arguments_t& aArgs,
-  const zorba::StaticContext* aSctx,
-  const zorba::DynamicContext* aDctx) const
-{
-  String lInstanceID = CouchbaseFunction::getOneStringArgument(aArgs, 0);
-  lcb_t lInstance = getInstance(aDctx, lInstanceID);
-  Iterator_t lKeys = getIterArgument(aArgs, 1);
-  Iterator_t lValues = getIterArgument(aArgs, 2);
-  
-  StoreOptions lOptions(LCB_XML);
   if (aArgs.size() > 3)
   {
     Item lOptionsArg = getOneItemArgument(aArgs, 3);

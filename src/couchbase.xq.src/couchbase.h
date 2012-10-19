@@ -378,46 +378,6 @@ class StoreTextFunction : public CouchbaseFunction
 /*******************************************************************************
  ******************************************************************************/
 
-class StoreJsonFunction : public CouchbaseFunction
-{
-  public:
-    StoreJsonFunction(const CouchbaseModule* aModule)
-      : CouchbaseFunction(aModule) {}
-
-    virtual ~StoreJsonFunction(){}
-
-    virtual zorba::String
-      getLocalName() const { return "store-json"; }
-
-    virtual zorba::ItemSequence_t
-      evaluate( const Arguments_t&,
-                const zorba::StaticContext*,
-                const zorba::DynamicContext*) const;
-};
-
-/*******************************************************************************
- ******************************************************************************/
-
-class StoreXmlFunction : public CouchbaseFunction
-{
-  public:
-    StoreXmlFunction(const CouchbaseModule* aModule)
-      : CouchbaseFunction(aModule) {}
-
-    virtual ~StoreXmlFunction(){}
-
-    virtual zorba::String
-      getLocalName() const { return "store-xml"; }
-
-    virtual zorba::ItemSequence_t
-      evaluate( const Arguments_t&,
-                const zorba::StaticContext*,
-                const zorba::DynamicContext*) const;
-};
-
-/*******************************************************************************
- ******************************************************************************/
-
 class StoreBinaryFunction : public CouchbaseFunction
 {
   public:
