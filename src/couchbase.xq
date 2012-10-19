@@ -17,7 +17,13 @@ declare function cb:connect($host as xs:string,
                             $username as xs:string?, 
                             $password as xs:string?, 
                             $bucket as xs:string)
-    as xs:anyURI external;
+    as xs:anyURI
+  {
+    cb:connect({"host" : $host, 
+                "username" : $username,
+                "password" : $password, 
+                "bucket" : $bucket })
+  };
 
 (:~
  : Connect to the couchbase server
