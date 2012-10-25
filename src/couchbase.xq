@@ -127,7 +127,10 @@ declare function cb:store-text(
             $db as xs:anyURI,
             $key as xs:string*,
             $value as xs:string*)
-    as empty-sequence() external;
+    as empty-sequence()
+    {
+      cb:store-text($db, $key, $value, { "expiration-time" : 60, "encoding" : "UTF-8" })
+    };
 
 (:~
  : Stores key/value(text) into the couchbase server's cache.
@@ -142,9 +145,11 @@ declare function cb:store-text(
  :      "expiration-time" : 60
  :      "operation" : "add"
  :    }
- :    expiration-time value is in seconds.
- :    operation possible values are "add", "replace", "set", "append" 
- :      and "prepend".
+ : @option "expiration-time" integer value that represent the 
+ :         expiration time in seconds.
+ : @oprion "operation" type of operation, possible values are 
+ :         "add", "replace", "set", "append" and "prepend".
+ : @option "encoding" string with the name of the encoding.
  :
  :)  
 
@@ -169,8 +174,10 @@ declare function cb:store-binary(
             $db as xs:anyURI,
             $key as xs:string*,
             $value as xs:base64Binary*)
-    as empty-sequence() external;
-
+    as empty-sequence() 
+    {
+      cb:store-binary($db, $key, $value, { "expiration-time" : 60 })
+    };
 (:~
  : Stores key/value(base64binary) into the couchbase server's cache.
  :
@@ -184,9 +191,11 @@ declare function cb:store-binary(
  :      "expiration-time" : 60
  :      "operation" : "add"
  :    }
- :    expiration-time value is in seconds.
- :    operation possible values are "add", "replace", "set", "append" 
- :      and "prepend".
+ : @option "expiration-time" integer value that represent the 
+ :         expiration time in seconds.
+ : @oprion "operation" type of operation, possible values are 
+ :         "add", "replace", "set", "append" and "prepend".
+ : @option "encoding" string with the name of the encoding.
  :
  :)  
 

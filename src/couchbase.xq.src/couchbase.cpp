@@ -448,7 +448,7 @@ ConnectFunction::evaluate(
   
   struct lcb_create_st create_options;
   memset(&create_options, 0, sizeof(create_options));
-
+  
   if (lHost.isNull())
     throwError ("CB0001", "Missing declaration of the couchbase server host");
   String lStrHost = lHost.getStringValue();
@@ -462,18 +462,14 @@ ConnectFunction::evaluate(
   if (!lUserName.isNull())
   {
     String lStrUserName = lUserName.getStringValue();
-    if (lStrUserName == "null")
-      create_options.v.v0.user = NULL;
-    else
+    if (lStrUserName != "null")
       create_options.v.v0.user = lStrUserName.c_str();
   }
 
   if (!lPassword.isNull())
   {
     String lStrPassword = lPassword.getStringValue();
-    if (lStrPassword == "null")
-      create_options.v.v0.passwd = NULL;
-    else
+    if (lStrPassword != "null")
       create_options.v.v0.passwd = lStrPassword.c_str();
   }
 
@@ -571,22 +567,22 @@ CouchbaseFunction::FindItemSequence::get_callback(lcb_t instance, const void *co
 
   if(lType == LCB_TEXT)
   {
-    char lData[resp->v.v0.nbytes+1];
-    lData[resp->v.v0.nbytes] = 0;
-    memcpy(lData, resp->v.v0.bytes, resp->v.v0.nbytes);
     String lEncoding = lRes->getEncoding();
-    String lStrValue (lData);
+    String lTmp((const char*)resp->v.v0.bytes, resp->v.v0.nbytes);
+    std::cout << resp->v.v0.nbytes;
     if (lEncoding != "" && transcode::is_necessary(lEncoding.c_str()))
-    {
-      std::stringstream lStream;
-      lStream << lStrValue.c_str();
-      transcode::attach(lStream, lEncoding.c_str());
-      lRes->theItem = CouchbaseModule::getItemFactory()->createString(lStream.str());
+    {    
+      transcode::stream<std::istringstream> lTranscoder(lEncoding.c_str(), lTmp.c_str());
+      lTmp.clear();
+
+      char buf[1024];
+      while (lTranscoder.good())
+      {
+        lTranscoder.read(buf, 1024);
+        lTmp.append(buf, lTranscoder.gcount());
+      }      
     }
-    else
-    {
-      lRes->theItem = CouchbaseModule::getItemFactory()->createString(lStrValue);
-    }
+    lRes->theItem = CouchbaseModule::getItemFactory()->createString(lTmp);
   }
   else if (lType == LCB_BASE64)
   {
@@ -726,22 +722,25 @@ void CouchbaseFunction::store (lcb_t aInstance, Iterator_t aKeys, Iterator_t aVa
     const char* lData;
     size_t lLen = 0;
     lStore.v.v0.datatype = aOptions.getOperationType();
+    String lStrValue;
     if (lStore.v.v0.datatype == LCB_TEXT)
     {
       String lEncoding = aOptions.getEncoding();
-      String lStrValue = lValue.getStringValue();
+      lStrValue = lValue.getStringValue();
       if (lEncoding != "" && transcode::is_necessary(lEncoding.c_str()))
       {
-        std::stringstream lStream;
-        lStream << lStrValue.c_str();
+        std::stringstream lStream;        
         transcode::attach(lStream, lEncoding.c_str());
-        lData = lStream.str().c_str();
-        lLen = strlen(lData)+1;
+        lStream << lStrValue.c_str();
+        lStrValue.clear();
+        lStrValue = lStream.str();
+        lData = lStrValue.c_str();
+        lLen = strlen(lData);
       }
       else
       {
         lData = lStrValue.c_str();
-        lLen = strlen(lData)+1;
+        lLen = strlen(lData);
       }
     }
     else if (lStore.v.v0.datatype == LCB_BASE64)
