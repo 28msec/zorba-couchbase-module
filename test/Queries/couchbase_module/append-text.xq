@@ -6,8 +6,8 @@ variable $instance := cb:connect({
   "password" : null,
   "bucket" : "default"});
 
-cb:store-text($instance, "key1", "foo");
-cb:store-text($instance, "key1", "foo2", { "operation" : "append" });
-variable $result := cb:find-text($instance, "key1");
+cb:store-text($instance, "append", "foo");
+cb:store-text($instance, "append", "foo2", { "operation" : "append" });
+variable $result := cb:find-text($instance, "append");
 cb:disconnect($instance);
 $result

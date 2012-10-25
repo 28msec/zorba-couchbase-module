@@ -569,7 +569,6 @@ CouchbaseFunction::FindItemSequence::get_callback(lcb_t instance, const void *co
   {
     String lEncoding = lRes->getEncoding();
     String lTmp((const char*)resp->v.v0.bytes, resp->v.v0.nbytes);
-    std::cout << resp->v.v0.nbytes;
     if (lEncoding != "" && transcode::is_necessary(lEncoding.c_str()))
     {    
       transcode::stream<std::istringstream> lTranscoder(lEncoding.c_str(), lTmp.c_str());

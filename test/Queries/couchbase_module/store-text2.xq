@@ -6,7 +6,7 @@ variable $instance := cb:connect({
   "password" : null,
   "bucket" : "default"});
 
-cb:store-text($instance, "encoding", "äüö", { "encoding" : "ISO-8859-1" });
-variable $result := cb:find-text($instance, "encoding", { "encoding" : "ISO-8859-1" });
+cb:store-text($instance, "key1", "foo", { "encoding" : "foo" });
+variable $result := cb:find-text($instance, "key1", { "encoding" : "UTF-8" });
 cb:disconnect($instance);
 $result
