@@ -86,7 +86,7 @@ class CouchbaseFunction : public ContextualExternalFunction
 
     } lcb_storage_type_t;
 
-    class FindOptions
+    class GetOptions
     {
       protected:
         lcb_storage_type_t theType;
@@ -96,15 +96,15 @@ class CouchbaseFunction : public ContextualExternalFunction
       public:
         Item theItem;
 
-        FindOptions() : theType(LCB_JSON), theExpTime(0), theEncoding("") {}
+        GetOptions() : theType(LCB_JSON), theExpTime(0), theEncoding("") {}
 
-        FindOptions(lcb_storage_type_t aType) : theType(aType), theExpTime(0) {} 
+        GetOptions(lcb_storage_type_t aType) : theType(aType), theExpTime(0) {} 
 
         void setOptions(Item aOptions);
 
-        ~FindOptions() {}
+        ~GetOptions() {}
 
-        lcb_storage_type_t getFindType() { return theType; }
+        lcb_storage_type_t getGetType() { return theType; }
 
         unsigned int getExpTime() { return theExpTime; }
 
@@ -112,7 +112,7 @@ class CouchbaseFunction : public ContextualExternalFunction
 
     };
 
-    class StoreOptions
+    class PutOptions
     {
       protected:
         
@@ -123,13 +123,13 @@ class CouchbaseFunction : public ContextualExternalFunction
 
       public:
 
-        StoreOptions() : theOperation(LCB_ADD), theType(LCB_JSON), theExpTime(0), theEncoding("") { }
+        PutOptions() : theOperation(LCB_ADD), theType(LCB_JSON), theExpTime(0), theEncoding("") { }
 
-        StoreOptions(lcb_storage_type_t aType) : theOperation(LCB_SET), theType(aType), theExpTime(0) { }
+        PutOptions(lcb_storage_type_t aType) : theOperation(LCB_SET), theType(aType), theExpTime(0) { }
 
         void setOptions(Item aOptions);
 
-        ~StoreOptions() {}
+        ~PutOptions() {}
 
         lcb_storage_t getOperation() { return theOperation; }
 
@@ -140,30 +140,30 @@ class CouchbaseFunction : public ContextualExternalFunction
         String getEncoding() { return theEncoding; }
     };
 
-    class FindItemSequence : public ItemSequence
+    class GetItemSequence : public ItemSequence
     {
       protected:
         lcb_t theInstance;
         Iterator_t theKeys;
-        FindOptions theOptions;
+        GetOptions theOptions;
     
       public:
 
-        class FindIterator : public Iterator
+        class GetIterator : public Iterator
         {
           protected:            
             lcb_t theInstance;
             lcb_error_t theError;
             Iterator_t theKeys;
-            FindOptions theOptions;
+            GetOptions theOptions;
 
           public:
-            FindIterator(lcb_t& aInstance, Iterator_t& aKeys, FindOptions& aOptions) 
+            GetIterator(lcb_t& aInstance, Iterator_t& aKeys, GetOptions& aOptions) 
               : theInstance(aInstance),
                 theKeys(aKeys),
                 theOptions(aOptions) {}
 
-            virtual ~FindIterator() {}
+            virtual ~GetIterator() {}
 
             void
               open();
@@ -179,15 +179,15 @@ class CouchbaseFunction : public ContextualExternalFunction
         };
 
       public:
-        FindItemSequence(lcb_t& aInstance, Iterator_t& aKeys, FindOptions aOptions) 
+        GetItemSequence(lcb_t& aInstance, Iterator_t& aKeys, GetOptions aOptions) 
           : theInstance(aInstance),
             theKeys(aKeys),
             theOptions(aOptions){}
 
-        virtual ~FindItemSequence(){}
+        virtual ~GetItemSequence(){}
 
         zorba::Iterator_t
-          getIterator() { return new FindIterator(theInstance, theKeys, theOptions); }
+          getIterator() { return new GetIterator(theInstance, theKeys, theOptions); }
 
       protected:
         static void 
@@ -212,7 +212,7 @@ class CouchbaseFunction : public ContextualExternalFunction
       getInstance (const DynamicContext*, const String& aIdent) const;
 
     static void
-      store (lcb_t aInstance, Iterator_t aKeys, Iterator_t aValues, StoreOptions aOptions);
+      store (lcb_t aInstance, Iterator_t aKeys, Iterator_t aValues, PutOptions aOptions);
 
   public:
     
@@ -288,18 +288,18 @@ class ConnectFunction : public CouchbaseFunction
 /*******************************************************************************
  ******************************************************************************/
 
-class FindTextFunction : public CouchbaseFunction
+class GetTextFunction : public CouchbaseFunction
 {
   public:
-    FindTextFunction(const CouchbaseModule* aModule)
+    GetTextFunction(const CouchbaseModule* aModule)
       : CouchbaseFunction(aModule) 
     {
     }
 
-    virtual ~FindTextFunction(){}
+    virtual ~GetTextFunction(){}
 
     virtual zorba::String
-      getLocalName() const { return "find-text"; }
+      getLocalName() const { return "get-text"; }
 
     virtual zorba::ItemSequence_t
       evaluate( const Arguments_t&,
@@ -313,18 +313,18 @@ class FindTextFunction : public CouchbaseFunction
 /*******************************************************************************
  ******************************************************************************/
 
-class FindBinaryFunction : public CouchbaseFunction
+class GetBinaryFunction : public CouchbaseFunction
 {
   public:
-    FindBinaryFunction(const CouchbaseModule* aModule)
+    GetBinaryFunction(const CouchbaseModule* aModule)
       : CouchbaseFunction(aModule) 
     {
     }
 
-    virtual ~FindBinaryFunction(){}
+    virtual ~GetBinaryFunction(){}
 
     virtual zorba::String
-      getLocalName() const { return "find-binary"; }
+      getLocalName() const { return "get-binary"; }
 
     virtual zorba::ItemSequence_t
       evaluate( const Arguments_t&,
@@ -358,16 +358,16 @@ class RemoveFunction : public CouchbaseFunction
 /*******************************************************************************
  ******************************************************************************/
 
-class StoreTextFunction : public CouchbaseFunction
+class PutTextFunction : public CouchbaseFunction
 {
   public:
-    StoreTextFunction(const CouchbaseModule* aModule)
+    PutTextFunction(const CouchbaseModule* aModule)
       : CouchbaseFunction(aModule) {}
 
-    virtual ~StoreTextFunction(){}
+    virtual ~PutTextFunction(){}
 
     virtual zorba::String
-      getLocalName() const { return "store-text"; }
+      getLocalName() const { return "put-text"; }
 
     virtual zorba::ItemSequence_t
       evaluate( const Arguments_t&,
@@ -378,16 +378,16 @@ class StoreTextFunction : public CouchbaseFunction
 /*******************************************************************************
  ******************************************************************************/
 
-class StoreBinaryFunction : public CouchbaseFunction
+class PutBinaryFunction : public CouchbaseFunction
 {
   public:
-    StoreBinaryFunction(const CouchbaseModule* aModule)
+    PutBinaryFunction(const CouchbaseModule* aModule)
       : CouchbaseFunction(aModule) {}
 
-    virtual ~StoreBinaryFunction(){}
+    virtual ~PutBinaryFunction(){}
 
     virtual zorba::String
-      getLocalName() const { return "store-binary"; }
+      getLocalName() const { return "put-binary"; }
 
     virtual zorba::ItemSequence_t
       evaluate( const Arguments_t&,

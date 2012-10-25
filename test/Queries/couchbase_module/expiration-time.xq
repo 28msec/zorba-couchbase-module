@@ -6,7 +6,7 @@ variable $instance := cb:connect({
   "password" : null,
   "bucket" : "default"});
 
-cb:store-text($instance, "exp-time", "foo", { "expiration-time" : 1 });
-variable $result := cb:find-text($instance, "exp-time");
+cb:put-text($instance, "exp-time", "foo", { "expiration-time" : 1 });
+variable $result := cb:get-text($instance, "exp-time");
 cb:disconnect($instance);
 $result

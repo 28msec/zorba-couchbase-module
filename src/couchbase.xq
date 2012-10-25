@@ -52,7 +52,7 @@ declare function cb:connect($options as object())
  : @return A sequence of string Items corresponding to the key
  :)
 
-declare function cb:find-text($db as xs:anyURI, $key as xs:string*)
+declare function cb:get-text($db as xs:anyURI, $key as xs:string*)
     as xs:string* external;
 
 (:~
@@ -68,7 +68,7 @@ declare function cb:find-text($db as xs:anyURI, $key as xs:string*)
  : @return A sequence of string Items corresponding to the key
  :)
 
-declare function cb:find-text($db as xs:anyURI, $key as xs:string*, $options as object())
+declare function cb:get-text($db as xs:anyURI, $key as xs:string*, $options as object())
     as xs:string* external;
 
 
@@ -82,7 +82,7 @@ declare function cb:find-text($db as xs:anyURI, $key as xs:string*, $options as 
  : @return A sequence of base64binary to the corresponding to the key
  :)
 
-declare function cb:find-binary($db as xs:anyURI, $key as xs:string*)
+declare function cb:get-binary($db as xs:anyURI, $key as xs:string*)
     as xs:base64Binary* external;
 
 (:~
@@ -98,7 +98,7 @@ declare function cb:find-binary($db as xs:anyURI, $key as xs:string*)
  : @return A sequence of base64binary to the corresponding to the key
  :)
 
-declare function cb:find-binary($db as xs:anyURI, $key as xs:string*, $options as object())
+declare function cb:get-binary($db as xs:anyURI, $key as xs:string*, $options as object())
     as xs:base64Binary* external;
 
 (:~
@@ -123,13 +123,13 @@ declare function cb:remove($db as xs:anyURI, $key as xs:string*)
  :
  :)  
 
-declare function cb:store-text(
+declare function cb:put-text(
             $db as xs:anyURI,
             $key as xs:string*,
             $value as xs:string*)
     as empty-sequence()
     {
-      cb:store-text($db, $key, $value, { "expiration-time" : 60, "encoding" : "UTF-8" })
+      cb:put-text($db, $key, $value, { "expiration-time" : 60, "encoding" : "UTF-8" })
     };
 
 (:~
@@ -153,7 +153,7 @@ declare function cb:store-text(
  :
  :)  
 
-declare function cb:store-text(
+declare function cb:put-text(
             $db as xs:anyURI,
             $key as xs:string*,
             $value as xs:string*,
@@ -170,13 +170,13 @@ declare function cb:store-text(
  :
  :)  
 
-declare function cb:store-binary(
+declare function cb:put-binary(
             $db as xs:anyURI,
             $key as xs:string*,
             $value as xs:base64Binary*)
     as empty-sequence() 
     {
-      cb:store-binary($db, $key, $value, { "expiration-time" : 60 })
+      cb:put-binary($db, $key, $value, { "expiration-time" : 60 })
     };
 (:~
  : Stores key/value(base64binary) into the couchbase server's cache.
@@ -199,7 +199,7 @@ declare function cb:store-binary(
  :
  :)  
 
-declare function cb:store-binary(
+declare function cb:put-binary(
             $db as xs:anyURI,
             $key as xs:string*,
             $value as xs:base64Binary*,

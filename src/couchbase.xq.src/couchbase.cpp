@@ -55,21 +55,21 @@ zorba::ExternalFunction*
     {
       lFunc = new ConnectFunction(this);
     }
-    else if (localname == "find-text")
+    else if (localname == "get-text")
     {
-      lFunc = new FindTextFunction(this);
+      lFunc = new GetTextFunction(this);
     }
-    else if (localname == "find-binary")
+    else if (localname == "get-binary")
     {
-      lFunc = new FindBinaryFunction(this);
+      lFunc = new GetBinaryFunction(this);
     }
-    else if (localname == "store-text")
+    else if (localname == "put-text")
     {
-      lFunc = new StoreTextFunction(this);
+      lFunc = new PutTextFunction(this);
     }
-    else if (localname == "store-binary")
+    else if (localname == "put-binary")
     {
-      lFunc = new StoreBinaryFunction(this);
+      lFunc = new PutBinaryFunction(this);
     }
     else if (localname == "remove")
     {
@@ -185,7 +185,7 @@ CouchbaseFunction::getInstance(const DynamicContext* aDctx, const String& aIdent
 }
 
 void 
-  CouchbaseFunction::FindOptions::setOptions(Item aOptions)
+  CouchbaseFunction::GetOptions::setOptions(Item aOptions)
 {
   if(!aOptions.isJSONItem())
     throwError("CB0002", "Options must be a JSON object");
@@ -253,7 +253,7 @@ void
 }
 
 void 
-CouchbaseFunction::StoreOptions::setOptions(Item aOptions)
+CouchbaseFunction::PutOptions::setOptions(Item aOptions)
 {
   if(!aOptions.isJSONItem())
     throwError("CB0002", "Options must be a JSON object");
@@ -549,7 +549,7 @@ RemoveFunction::evaluate(
  ******************************************************************************/
 
 void
-CouchbaseFunction::FindItemSequence::get_callback(lcb_t instance, const void *cookie, lcb_error_t error, const lcb_get_resp_t *resp)
+CouchbaseFunction::GetItemSequence::get_callback(lcb_t instance, const void *cookie, lcb_error_t error, const lcb_get_resp_t *resp)
 {
   if (error != LCB_SUCCESS)
   {
@@ -561,9 +561,9 @@ CouchbaseFunction::FindItemSequence::get_callback(lcb_t instance, const void *co
     throwError("LCB0002", lErrorMessage.str().c_str());
   }
   
-  FindOptions* lRes = (FindOptions*)cookie;
+  GetOptions* lRes = (GetOptions*)cookie;
   
-  lcb_storage_type_t lType = lRes->getFindType();
+  lcb_storage_type_t lType = lRes->getGetType();
 
   if(lType == LCB_TEXT)
   {
@@ -597,25 +597,25 @@ CouchbaseFunction::FindItemSequence::get_callback(lcb_t instance, const void *co
 }
 
 void
-CouchbaseFunction::FindItemSequence::FindIterator::open()
+CouchbaseFunction::GetItemSequence::GetIterator::open()
 {
-  lcb_set_get_callback(theInstance, FindItemSequence::get_callback);
+  lcb_set_get_callback(theInstance, GetItemSequence::get_callback);
   theKeys->open();
 }
 
 void
-CouchbaseFunction::FindItemSequence::FindIterator::close()
+CouchbaseFunction::GetItemSequence::GetIterator::close()
 {
   theKeys->close();
 }
 
 bool
-CouchbaseFunction::FindItemSequence::FindIterator::next(Item& aItem)
+CouchbaseFunction::GetItemSequence::GetIterator::next(Item& aItem)
 {
   Item lKey;
   if (theKeys->next(lKey))
   {
-    FindOptions* lValue = &theOptions;
+    GetOptions* lValue = &theOptions;
     String lStrKey = lKey.getStringValue();
     lcb_get_cmd_st lGet;
     lGet.v.v0.key = lStrKey.c_str();
@@ -655,7 +655,7 @@ CouchbaseFunction::FindItemSequence::FindIterator::next(Item& aItem)
  ******************************************************************************/
 
 zorba::ItemSequence_t
-FindTextFunction::evaluate(
+GetTextFunction::evaluate(
   const Arguments_t& aArgs,
   const zorba::StaticContext* aSctx,
   const zorba::DynamicContext* aDctx) const
@@ -663,21 +663,21 @@ FindTextFunction::evaluate(
   String lInstanceID = getOneStringArgument(aArgs, 0);
   lcb_t lInstance = getInstance(aDctx, lInstanceID);
   Iterator_t lKeys = getIterArgument(aArgs, 1);
-  FindOptions lOptions(LCB_TEXT);
+  GetOptions lOptions(LCB_TEXT);
   if (aArgs.size() > 2)
   {
     Item lOptionsArg = getOneItemArgument(aArgs, 2);
     lOptions.setOptions(lOptionsArg);
   }
  
-  return ItemSequence_t(new FindItemSequence(lInstance,lKeys, lOptions));   
+  return ItemSequence_t(new GetItemSequence(lInstance,lKeys, lOptions));   
 }
 
 /*******************************************************************************
  ******************************************************************************/
 
 zorba::ItemSequence_t
-FindBinaryFunction::evaluate(
+GetBinaryFunction::evaluate(
   const Arguments_t& aArgs,
   const zorba::StaticContext* aSctx,
   const zorba::DynamicContext* aDctx) const
@@ -685,20 +685,20 @@ FindBinaryFunction::evaluate(
   String lInstanceID = getOneStringArgument(aArgs, 0);
   lcb_t lInstance = getInstance(aDctx, lInstanceID);
   Iterator_t lKeys = getIterArgument(aArgs, 1);
-  FindOptions lOptions(LCB_BASE64);
+  GetOptions lOptions(LCB_BASE64);
   if (aArgs.size() > 2)
   {
     Item lOptionsArg = getOneItemArgument(aArgs, 2);
     lOptions.setOptions(lOptionsArg);
   }
  
-  return ItemSequence_t(new FindItemSequence(lInstance,lKeys, lOptions));   
+  return ItemSequence_t(new GetItemSequence(lInstance,lKeys, lOptions));   
 }
 
 /*******************************************************************************
  ******************************************************************************/
 
-void CouchbaseFunction::store (lcb_t aInstance, Iterator_t aKeys, Iterator_t aValues, StoreOptions aOptions)
+void CouchbaseFunction::store (lcb_t aInstance, Iterator_t aKeys, Iterator_t aValues, PutOptions aOptions)
 {
   lcb_error_t lError;
   Item lKey;
@@ -714,15 +714,15 @@ void CouchbaseFunction::store (lcb_t aInstance, Iterator_t aKeys, Iterator_t aVa
     String lStrKey = lKey.getStringValue();
 
     //TODO: add more options
-    lcb_store_cmd_st lStore;
-    lStore.v.v0.key = lStrKey.c_str();
-    lStore.v.v0.nkey = strlen((const char*)(lStore.v.v0.key));
+    lcb_store_cmd_st lPut;
+    lPut.v.v0.key = lStrKey.c_str();
+    lPut.v.v0.nkey = strlen((const char*)(lPut.v.v0.key));
     
     const char* lData;
     size_t lLen = 0;
-    lStore.v.v0.datatype = aOptions.getOperationType();
+    lPut.v.v0.datatype = aOptions.getOperationType();
     String lStrValue;
-    if (lStore.v.v0.datatype == LCB_TEXT)
+    if (lPut.v.v0.datatype == LCB_TEXT)
     {
       String lEncoding = aOptions.getEncoding();
       lStrValue = lValue.getStringValue();
@@ -742,7 +742,7 @@ void CouchbaseFunction::store (lcb_t aInstance, Iterator_t aKeys, Iterator_t aVa
         lLen = strlen(lData);
       }
     }
-    else if (lStore.v.v0.datatype == LCB_BASE64)
+    else if (lPut.v.v0.datatype == LCB_BASE64)
     {
       lData = lValue.getBase64BinaryValue(lLen);
     }
@@ -751,16 +751,16 @@ void CouchbaseFunction::store (lcb_t aInstance, Iterator_t aKeys, Iterator_t aVa
       throwError ("CB0004", " Storing type not recognized");
     }
 
-    lStore.v.v0.bytes = lData;
-    lStore.v.v0.nbytes = lLen;
-    lStore.v.v0.operation = aOptions.getOperation();
+    lPut.v.v0.bytes = lData;
+    lPut.v.v0.nbytes = lLen;
+    lPut.v.v0.operation = aOptions.getOperation();
     unsigned int lExpTime = aOptions.getExmpTime();
     if (lExpTime > 0)
     {
-      lStore.v.v0.exptime = lExpTime;
+      lPut.v.v0.exptime = lExpTime;
     }
 
-    lcb_store_cmd_st *lCommands[1] = {&lStore};
+    lcb_store_cmd_st *lCommands[1] = {&lPut};
     lError = lcb_store(aInstance, NULL, 1, lCommands);
     
     if (lError != LCB_SUCCESS)
@@ -786,7 +786,7 @@ void CouchbaseFunction::store (lcb_t aInstance, Iterator_t aKeys, Iterator_t aVa
  ******************************************************************************/
 
 zorba::ItemSequence_t
-StoreTextFunction::evaluate(
+PutTextFunction::evaluate(
   const Arguments_t& aArgs,
   const zorba::StaticContext* aSctx,
   const zorba::DynamicContext* aDctx) const
@@ -796,7 +796,7 @@ StoreTextFunction::evaluate(
   Iterator_t lKeys = getIterArgument(aArgs, 1);
   Iterator_t lValues = getIterArgument(aArgs, 2);
   
-  StoreOptions lOptions(LCB_TEXT);
+  PutOptions lOptions(LCB_TEXT);
   if (aArgs.size() > 3)
   {
     Item lOptionsArg = getOneItemArgument(aArgs, 3);
@@ -811,7 +811,7 @@ StoreTextFunction::evaluate(
  ******************************************************************************/
 
 zorba::ItemSequence_t
-StoreBinaryFunction::evaluate(
+PutBinaryFunction::evaluate(
   const Arguments_t& aArgs,
   const zorba::StaticContext* aSctx,
   const zorba::DynamicContext* aDctx) const
@@ -821,7 +821,7 @@ StoreBinaryFunction::evaluate(
   Iterator_t lKeys = getIterArgument(aArgs, 1);
   Iterator_t lValues = getIterArgument(aArgs, 2);
   
-  StoreOptions lOptions(LCB_BASE64);
+  PutOptions lOptions(LCB_BASE64);
   if (aArgs.size() > 3)
   {
     Item lOptionsArg = getOneItemArgument(aArgs, 3);

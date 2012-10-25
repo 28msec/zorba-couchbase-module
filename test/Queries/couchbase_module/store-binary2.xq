@@ -8,7 +8,7 @@ variable $instance := cb:connect({
   "bucket" : "default"});
 
 variable $binary := f:read-binary(resolve-uri("connect.xq"));
-cb:store-binary($instance, "binary-file", $binary);
-variable $result := cb:find-text($instance, "binary-file");
+cb:put-binary($instance, "binary-file", $binary);
+variable $result := cb:get-text($instance, "binary-file");
 cb:disconnect($instance);
 $result
