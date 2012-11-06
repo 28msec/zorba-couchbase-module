@@ -33,8 +33,6 @@
 
 #include <libcouchbase/couchbase.h>
 
-#define LCB_WRITE_BUFF_SIZE 24
-
 #include "couchbase.h"
 
 namespace zorba { namespace couchbase {
@@ -137,24 +135,20 @@ CouchbaseFunction::getURI() const
 String
 CouchbaseFunction::getOneStringArgument(const Arguments_t& aArgs, int aPos) const
 {
-  Item lItem;
-  Iterator_t args_iter = aArgs[aPos]->getIterator();
-  args_iter->open();
-  args_iter->next(lItem);
+  Item lItem = getOneItemArgument(aArgs, aPos);
   String lTmpString = lItem.getStringValue();
-  args_iter->close();
   return lTmpString;
 }
 
 Item
 CouchbaseFunction::getOneItemArgument(const Arguments_t& aArgs, int aPos) const
 {
-    Item lItem;
-    Iterator_t args_iter = aArgs[aPos]->getIterator();
-    args_iter->open();
-    args_iter->next(lItem);
-    args_iter->close();
-    return lItem;
+  Item lItem;
+  Iterator_t args_iter = getIterArgument(aArgs, aPos);
+  args_iter->open();
+  args_iter->next(lItem);
+  args_iter->close();
+  return lItem;
 }
 
 Iterator_t
@@ -167,36 +161,44 @@ CouchbaseFunction::getIterArgument(const Arguments_t& aArgs, int aPos) const
 void
 CouchbaseFunction::throwError(const char *aLocalName, const char* aErrorMessage)
 {
-  String errNS(COUCHBASE_MODULE_NAMESPACE);
   String errName(aLocalName);
-  Item errQName = CouchbaseModule::getItemFactory()->createQName(errNS, errName);
+  Item errQName = CouchbaseModule::getItemFactory()->createQName(COUCHBASE_MODULE_NAMESPACE, errName);
   String errDescription(aErrorMessage);
   throw USER_EXCEPTION(errQName, errDescription);
 }
+
+void 
+CouchbaseFunction::isNotJSONError() 
+{ 
+  throwError("CB0002", "Options parameter is not a JSON object"); 
+}
+
+void
+CouchbaseFunction::libCouchbaseError(lcb_t aInstance, lcb_error_t aError) 
+{ 
+  throwError("LCB0002", lcb_strerror(aInstance, aError)); 
+} 
+
 
 lcb_t
 CouchbaseFunction::getInstance(const DynamicContext* aDctx, const String& aIdent) const
 {
   InstanceMap* lInstanceMap;
-  if (!(lInstanceMap = dynamic_cast<InstanceMap*>(aDctx->getExternalFunctionParameter("couchbaseInstanceMap"))))
-  {
-    throwError("CB0000", "No instance of couchbase with the given identifier was found.");
-  }
-
   lcb_t lInstance;
-  if(!(lInstance = lInstanceMap->getInstance(aIdent)))
+  if ((lInstanceMap = dynamic_cast<InstanceMap*>(aDctx->getExternalFunctionParameter("couchbaseInstanceMap"))))
   {
-    throwError("CB0000", "No instance of couchbase with the given identifier was found.");
+    if ((lInstance = lInstanceMap->getInstance(aIdent)))
+      return lInstance;
   }
-
-  return lInstance;
+  throwError("CB0000", "No instance of couchbase with the given identifier was found.");
+  return NULL;
 }
 
 void
-  CouchbaseFunction::ViewOptions::setOptions(Item aOptions)
+  CouchbaseFunction::ViewOptions::setOptions(Item& aOptions)
 {
   if (!aOptions.isJSONItem())
-    throwError("CB0002", "Options must be a JSON object");
+    isNotJSONError();
 
   Iterator_t lIter = aOptions.getObjectKeys();
   Item lItem;
@@ -211,9 +213,6 @@ void
     {
       Item lValue = aOptions.getObjectValue(lStrKey);
       theEncoding = lValue.getStringValue();
-      std::transform(
-        theEncoding.begin(), theEncoding.end(),
-        theEncoding.begin(), toupper);
       if (!transcode::is_supported(theEncoding.c_str()))
       {
         std::ostringstream lMsg;
@@ -232,10 +231,10 @@ void
 }
 
 void 
-  CouchbaseFunction::GetOptions::setOptions(Item aOptions)
+  CouchbaseFunction::GetOptions::setOptions(Item& aOptions)
 {
   if (!aOptions.isJSONItem())
-    throwError("CB0002", "Options must be a JSON object");
+    isNotJSONError();
 
   Iterator_t lIter = aOptions.getObjectKeys();
   Item lItem;
@@ -278,9 +277,6 @@ void
     {
       Item lValue = aOptions.getObjectValue(lStrKey);
       theEncoding = lValue.getStringValue();
-      std::transform(
-        theEncoding.begin(), theEncoding.end(),
-        theEncoding.begin(), toupper);
       if (!transcode::is_supported(theEncoding.c_str()))
       {
         std::ostringstream lMsg;
@@ -300,10 +296,10 @@ void
 }
 
 void 
-CouchbaseFunction::PutOptions::setOptions(Item aOptions)
+CouchbaseFunction::PutOptions::setOptions(Item& aOptions)
 {
-  if(!aOptions.isJSONItem())
-    throwError("CB0002", "Options must be a JSON object");
+  if (!aOptions.isJSONItem())
+    isNotJSONError();
 
   Iterator_t lIter = aOptions.getObjectKeys();
   Item lItem;
@@ -372,9 +368,6 @@ CouchbaseFunction::PutOptions::setOptions(Item aOptions)
     {
       Item lValue = aOptions.getObjectValue(lStrKey);
       theEncoding = lValue.getStringValue();
-      std::transform(
-        theEncoding.begin(), theEncoding.end(),
-        theEncoding.begin(), toupper);
       if (!transcode::is_supported(theEncoding.c_str()))
       {
             std::ostringstream lMsg;
@@ -490,7 +483,7 @@ ConnectFunction::evaluate(
   }
   else
   {
-    throwError("CB0002", "Options sent in the connect function is not a JSON object");
+    isNotJSONError();
   }
   
   struct lcb_create_st create_options;
@@ -574,15 +567,13 @@ RemoveFunction::evaluate(
     lcb_remove_cmd_st lCmd;
     String lStrKey = lKey.getStringValue();
     lCmd.v.v0.key = lStrKey.c_str();
-    lCmd.v.v0.nkey = strlen((const char*)(lCmd.v.v0.key)); 
+    lCmd.v.v0.nkey = lStrKey.size(); 
     lcb_remove_cmd_st *lCommand[1] = {&lCmd};
 
     lError = lcb_remove(lInstance, NULL, 1, lCommand);
     if (lError != LCB_SUCCESS)
     {
-      std::stringstream lErrorMessage;
-      lErrorMessage << "Error finding key \"" << lStrKey  << "\" : " <<  lcb_strerror(lInstance, lError);
-      throwError("LCB0002", lErrorMessage.str().c_str());
+      CouchbaseFunction::libCouchbaseError (lInstance, lError);
     } 
     
     lcb_wait(lInstance);
@@ -600,21 +591,14 @@ CouchbaseFunction::GetItemSequence::get_callback(lcb_t instance, const void *coo
 {
   if (error != LCB_SUCCESS)
   {
-    //char lKey[resp->v.v0.nkey+1];
-    //lKey[resp->v.v0.nkey]=0;
-    //memcpy(lKey, resp->v.v0.key, resp->v.v0.nkey);
-    std::stringstream lErrorMessage;
-    lErrorMessage << "\"";
-    lErrorMessage.write((const char*)resp->v.v0.key, resp->v.v0.nkey);
-    lErrorMessage << "\":" << lcb_strerror(instance, error);
-    throwError("LCB0002", lErrorMessage.str().c_str());
+    libCouchbaseError (instance, error);
   }
   
   GetOptions* lRes = (GetOptions*)cookie;
   
   lcb_storage_type_t lType = lRes->getGetType();
 
-  if(lType == LCB_TEXT)
+  if (lType == LCB_TEXT)
   {
     String lEncoding = lRes->getEncoding();
     String lTmp((const char*)resp->v.v0.bytes, resp->v.v0.nbytes);
@@ -637,7 +621,7 @@ CouchbaseFunction::GetItemSequence::get_callback(lcb_t instance, const void *coo
     //unsigned char lData[resp->v.v0.nbytes];
     //size_t lLen = resp->v.v0.nbytes;
     //memcpy(lData, resp->v.v0.bytes, lLen);
-    lRes->theItem = CouchbaseModule::getItemFactory()->createBase64Binary((const char*)resp->v.v0.bytes, resp->v.v0.nbytes);
+    lRes->theItem = CouchbaseModule::getItemFactory()->createBase64Binary((const unsigned char*)resp->v.v0.bytes, resp->v.v0.nbytes);
   }
   else
   {
@@ -668,7 +652,7 @@ CouchbaseFunction::GetItemSequence::GetIterator::next(Item& aItem)
     String lStrKey = lKey.getStringValue();
     lcb_get_cmd_st lGet;
     lGet.v.v0.key = lStrKey.c_str();
-    lGet.v.v0.nkey = strlen((const char*) lGet.v.v0.key);
+    lGet.v.v0.nkey = lStrKey.size();
     unsigned int lExpTime = theOptions.getExpTime();
     if (lExpTime > 0)
     {
@@ -681,9 +665,7 @@ CouchbaseFunction::GetItemSequence::GetIterator::next(Item& aItem)
 
     if (theError != LCB_SUCCESS)
     {
-      std::stringstream lErrorMessage;
-      lErrorMessage << "Error finding key \"" << lStrKey  << "\" : " <<  lcb_strerror(theInstance, theError);
-      throwError("LCB0002", lErrorMessage.str().c_str());
+      libCouchbaseError (theInstance, theError);
     } 
     lcb_wait(theInstance);
     
@@ -747,7 +729,7 @@ GetBinaryFunction::evaluate(
 /*******************************************************************************
  ******************************************************************************/
 
-void CouchbaseFunction::store (lcb_t aInstance, Iterator_t aKeys, Iterator_t aValues, PutOptions aOptions)
+void CouchbaseFunction::put (lcb_t aInstance, Iterator_t aKeys, Iterator_t aValues, PutOptions aOptions)
 {
   lcb_error_t lError;
   Item lKey;
@@ -765,7 +747,7 @@ void CouchbaseFunction::store (lcb_t aInstance, Iterator_t aKeys, Iterator_t aVa
     //TODO: add more options
     lcb_store_cmd_st lPut;
     lPut.v.v0.key = lStrKey.c_str();
-    lPut.v.v0.nkey = strlen((const char*)(lPut.v.v0.key));
+    lPut.v.v0.nkey = lStrKey.size();
     
     const char* lData;
     size_t lLen = 0;
@@ -783,12 +765,12 @@ void CouchbaseFunction::store (lcb_t aInstance, Iterator_t aKeys, Iterator_t aVa
         lStrValue.clear();
         lStrValue = lStream.str();
         lData = lStrValue.c_str();
-        lLen = strlen(lData);
+        lLen = lStrValue.size();
       }
       else
       {
         lData = lStrValue.c_str();
-        lLen = strlen(lData);
+        lLen = lStrValue.size();
       }
     }
     else if (lPut.v.v0.datatype == LCB_BASE64)
@@ -814,9 +796,7 @@ void CouchbaseFunction::store (lcb_t aInstance, Iterator_t aKeys, Iterator_t aVa
     
     if (lError != LCB_SUCCESS)
     {
-      std::stringstream lErrorMessage;
-      lErrorMessage << "Error storing key \"" << lStrKey  << "\" : " <<  lcb_strerror(aInstance, lError);
-      throwError("LCB0002", lErrorMessage.str().c_str());
+      libCouchbaseError (aInstance, lError);
     } 
 
 
@@ -852,7 +832,7 @@ PutTextFunction::evaluate(
     lOptions.setOptions(lOptionsArg);
   }
 
-  store(lInstance, lKeys, lValues, lOptions);
+  put(lInstance, lKeys, lValues, lOptions);
   return ItemSequence_t(new EmptySequence());  
 }
 
@@ -877,7 +857,7 @@ PutBinaryFunction::evaluate(
     lOptions.setOptions(lOptionsArg);
   }
 
-  store(lInstance, lKeys, lValues, lOptions);
+  put(lInstance, lKeys, lValues, lOptions);
   return ItemSequence_t(new EmptySequence());  
 }
 
@@ -935,16 +915,14 @@ TouchFunction::evaluate(
     lcb_touch_cmd_t lCmd;
     String lStrKey = lKey.getStringValue();
     lCmd.v.v0.key = lStrKey.c_str();
-    lCmd.v.v0.nkey = strlen((const char*)(lCmd.v.v0.key)); 
+    lCmd.v.v0.nkey = lStrKey.size(); 
     lCmd.v.v0.exptime = lInt;
     lcb_touch_cmd_t *lCommand[1] = {&lCmd};
 
     lError = lcb_touch(lInstance, NULL, 1, lCommand);
     if (lError != LCB_SUCCESS)
     {
-      std::stringstream lErrorMessage;
-      lErrorMessage << "Error finding key \"" << lStrKey  << "\" : " <<  lcb_strerror(lInstance, lError);
-      throwError("LCB0002", lErrorMessage.str().c_str());
+      libCouchbaseError (lInstance, lError);
     } 
     
     lcb_wait(lInstance);
@@ -966,15 +944,13 @@ DisconnectFunction::evaluate(
   String lInstanceID = getOneStringArgument(aArgs, 0);
   
   InstanceMap* lInstanceMap;
-  if (!(lInstanceMap = dynamic_cast<InstanceMap*>(aDctx->getExternalFunctionParameter("couchbaseInstanceMap"))))
+  if ((lInstanceMap = dynamic_cast<InstanceMap*>(aDctx->getExternalFunctionParameter("couchbaseInstanceMap"))))
   {
-    throwError("CB0000", "No instance of couchbase with the given identifier was found.");
+    if (lInstanceMap->deleteInstance(lInstanceID))
+      return ItemSequence_t(new EmptySequence());
   }
 
-  if (!lInstanceMap->deleteInstance(lInstanceID))
-  {
-    throwError("CB0000", "No instance of couchbase with the given identifier was found.");
-  }
+  throwError("CB0000", "No instance of couchbase with the given identifier was found.");
 
   return ItemSequence_t(new EmptySequence());  
 }
@@ -986,9 +962,7 @@ void CouchbaseFunction::ViewItemSequence::view_callback( lcb_http_request_t requ
 {
   if (error != LCB_SUCCESS)
   {
-    std::stringstream lErrorMessage;
-    lErrorMessage << lcb_strerror(instance, error);
-    throwError("LCB0002", lErrorMessage.str().c_str());
+    libCouchbaseError (instance, error);
   }
 
   ViewOptions* lRes = (ViewOptions*) cookie;
@@ -1048,7 +1022,7 @@ CouchbaseFunction::ViewItemSequence::ViewIterator::next(Item& aItem)
   
     if (err != LCB_SUCCESS)
     {
-      throwError("LCB0002", lcb_strerror(theInstance, err));
+      libCouchbaseError (theInstance, err);
     }
 
     lcb_wait(theInstance);
@@ -1274,7 +1248,7 @@ CreateViewFunction::evaluate(
   lcb_error_t err = lcb_make_http_request(lInstance, NULL, LCB_HTTP_TYPE_VIEW, &lCmd, &lReq);
 
   if (err != LCB_SUCCESS)
-    throwError("LCB0002", lcb_strerror(lInstance, err));
+    libCouchbaseError (lInstance, err);
 
   lcb_wait(lInstance);
 

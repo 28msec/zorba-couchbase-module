@@ -99,7 +99,7 @@ class CouchbaseFunction : public ContextualExternalFunction
 
         ViewOptions(String& aPath) : theEncoding("UTF-8"), thePath(aPath) {}
 
-        void setOptions(Item aOptions);
+        void setOptions(Item& aOptions);
 
         ~ViewOptions() {}
 
@@ -122,7 +122,7 @@ class CouchbaseFunction : public ContextualExternalFunction
 
         GetOptions(lcb_storage_type_t aType) : theType(aType), theExpTime(0) {} 
 
-        void setOptions(Item aOptions);
+        void setOptions(Item& aOptions);
 
         ~GetOptions() {}
 
@@ -149,7 +149,7 @@ class CouchbaseFunction : public ContextualExternalFunction
 
         PutOptions(lcb_storage_type_t aType) : theOperation(LCB_SET), theType(aType), theExpTime(0) { }
 
-        void setOptions(Item aOptions);
+        void setOptions(Item& aOptions);
 
         ~PutOptions() {}
 
@@ -287,11 +287,17 @@ class CouchbaseFunction : public ContextualExternalFunction
     static void
       throwError(const char*, const char*);
 
+    static void 
+      isNotJSONError();
+
+    static void
+      libCouchbaseError(lcb_t aInstance, lcb_error_t aError);
+
     lcb_t
       getInstance (const DynamicContext*, const String& aIdent) const;
 
     static void
-      store (lcb_t aInstance, Iterator_t aKeys, Iterator_t aValues, PutOptions aOptions);
+      put (lcb_t aInstance, Iterator_t aKeys, Iterator_t aValues, PutOptions aOptions);
 
   public:
     
