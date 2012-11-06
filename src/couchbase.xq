@@ -239,5 +239,18 @@ declare function cb:touch($db as xs:anyURI, $key as xs:string, $exp-time as xs:i
  :)
  
 declare function cb:disconnect($db as xs:anyURI)
-  as empty-sequence() external; 
+  as empty-sequence() external;
+
+
+declare function cb:view($db as xs:anyURI, $path as xs:string*)
+  as xs:string* external;
+
+declare function cb:view($db as xs:anyURI, $path as xs:string*, $options as object())
+  as xs:string* external; 
+
+declare function cb:create-view($db as xs:anyURI, $doc-name as xs:string, $view_name as xs:string*)
+  as xs:string* external;
+
+declare function cb:create-view($db as xs:anyURI, $doc-name as xs:string, $view_name as xs:string*, $options as object()*)
+  as xs:string* external;
 

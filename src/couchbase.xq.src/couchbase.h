@@ -86,6 +86,28 @@ class CouchbaseFunction : public ContextualExternalFunction
 
     } lcb_storage_type_t;
 
+    class ViewOptions
+    {
+      protected:
+        String theEncoding;
+        String thePath;
+
+      public:
+        Item theItem;
+
+        ViewOptions() : theEncoding("UTF-8"), thePath("") {}
+
+        ViewOptions(String& aPath) : theEncoding("UTF-8"), thePath(aPath) {}
+
+        void setOptions(Item aOptions);
+
+        ~ViewOptions() {}
+
+        String getEncoding() { return theEncoding; }
+
+        String getPath() { return thePath; }
+    };
+
     class GetOptions
     {
       protected:
@@ -138,6 +160,63 @@ class CouchbaseFunction : public ContextualExternalFunction
         unsigned int getExmpTime() { return theExpTime; }
 
         String getEncoding() { return theEncoding; }
+    };
+
+    class ViewItemSequence : public ItemSequence
+    {
+      protected:
+        lcb_t theInstance;
+        Iterator_t thePaths;
+        ViewOptions theOptions;
+
+      public:
+
+        class ViewIterator : public Iterator
+        {
+          protected:
+            lcb_t theInstance;
+            Iterator_t thePaths;
+            lcb_error_t theError;
+            ViewOptions theOptions;
+
+          public:
+            ViewIterator(lcb_t& aInstance, Iterator_t& aPaths, ViewOptions& aOptions)
+              : theInstance(aInstance),
+                thePaths(aPaths),
+                theOptions(aOptions){}
+            
+            void 
+              open();
+
+            bool
+              next(zorba::Item &aItem);
+
+            void
+              close();
+
+            bool
+              isOpen() const{ return thePaths->isOpen(); }
+
+        };
+
+        ViewItemSequence(lcb_t& aInstance, Iterator_t& aPaths, ViewOptions aOptions)
+          : theInstance(aInstance),
+            thePaths(aPaths),
+            theOptions(aOptions) {}
+
+        virtual ~ViewItemSequence() {}
+
+        zorba::Iterator_t
+          getIterator() { return new ViewIterator(theInstance, thePaths, theOptions); }
+
+      protected:
+        static void
+          view_callback( 
+            lcb_http_request_t request,
+            lcb_t instance,
+            const void *cookie,
+            lcb_error_t error,
+            const lcb_http_resp_t *resp);
     };
 
     class GetItemSequence : public ItemSequence
@@ -448,6 +527,46 @@ class DisconnectFunction : public CouchbaseFunction
 
     virtual zorba::String
       getLocalName() const { return "disconnect"; }
+
+    virtual zorba::ItemSequence_t
+      evaluate( const Arguments_t&,
+                const zorba::StaticContext*,
+                const zorba::DynamicContext*) const;
+};
+
+/*******************************************************************************
+ ******************************************************************************/
+
+class ViewFunction : public CouchbaseFunction
+{
+  public:
+    ViewFunction(const CouchbaseModule* aModule)
+      : CouchbaseFunction(aModule) {}
+
+    virtual ~ViewFunction(){}
+
+    virtual zorba::String
+      getLocalName() const { return "view"; }
+
+    virtual zorba::ItemSequence_t
+      evaluate( const Arguments_t&,
+                const zorba::StaticContext*,
+                const zorba::DynamicContext*) const;
+};
+
+/*******************************************************************************
+ ******************************************************************************/
+
+class CreateViewFunction : public CouchbaseFunction
+{
+  public:
+    CreateViewFunction(const CouchbaseModule* aModule)
+      : CouchbaseFunction(aModule) {}
+
+    virtual ~CreateViewFunction(){}
+
+    virtual zorba::String
+      getLocalName() const { return "create-view"; }
 
     virtual zorba::ItemSequence_t
       evaluate( const Arguments_t&,

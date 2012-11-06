@@ -87,6 +87,14 @@ zorba::ExternalFunction*
     {
       lFunc = new TouchFunction(this);
     }
+    else if (localname == "view")
+    {
+      lFunc = new ViewFunction(this);
+    }
+    else if (localname == "create-view")
+    {
+      lFunc = new CreateViewFunction(this);
+    }
   }
 
   return lFunc;
@@ -184,10 +192,49 @@ CouchbaseFunction::getInstance(const DynamicContext* aDctx, const String& aIdent
   return lInstance;
 }
 
+void
+  CouchbaseFunction::ViewOptions::setOptions(Item aOptions)
+{
+  if (!aOptions.isJSONItem())
+    throwError("CB0002", "Options must be a JSON object");
+
+  Iterator_t lIter = aOptions.getObjectKeys();
+  Item lItem;
+  lIter->open();
+  while (lIter->next(lItem))
+  {
+    String lStrKey = lItem.getStringValue();
+    std::transform(
+      lStrKey.begin(), lStrKey.end(),
+      lStrKey.begin(), tolower);
+    if (lStrKey == "encoding")
+    {
+      Item lValue = aOptions.getObjectValue(lStrKey);
+      theEncoding = lValue.getStringValue();
+      std::transform(
+        theEncoding.begin(), theEncoding.end(),
+        theEncoding.begin(), toupper);
+      if (!transcode::is_supported(theEncoding.c_str()))
+      {
+        std::ostringstream lMsg;
+        lMsg << theEncoding << ": unsupported encoding";
+        throwError("CB0006", lMsg.str().c_str());
+      }
+    }
+    else
+    {
+      std::ostringstream lMsg;
+      lMsg << lStrKey << ": option not supported";
+      throwError("CB0007", lMsg.str().c_str());
+    }
+  }
+  lIter->close();
+}
+
 void 
   CouchbaseFunction::GetOptions::setOptions(Item aOptions)
 {
-  if(!aOptions.isJSONItem())
+  if (!aOptions.isJSONItem())
     throwError("CB0002", "Options must be a JSON object");
 
   Iterator_t lIter = aOptions.getObjectKeys();
@@ -553,11 +600,13 @@ CouchbaseFunction::GetItemSequence::get_callback(lcb_t instance, const void *coo
 {
   if (error != LCB_SUCCESS)
   {
-    char lKey[resp->v.v0.nkey+1];
-    lKey[resp->v.v0.nkey]=0;
-    memcpy(lKey, resp->v.v0.key, resp->v.v0.nkey);
+    //char lKey[resp->v.v0.nkey+1];
+    //lKey[resp->v.v0.nkey]=0;
+    //memcpy(lKey, resp->v.v0.key, resp->v.v0.nkey);
     std::stringstream lErrorMessage;
-    lErrorMessage << "Error finding key \"" << lKey  << "\" : " <<  lcb_strerror(instance, error);
+    lErrorMessage << "\"";
+    lErrorMessage.write((const char*)resp->v.v0.key, resp->v.v0.nkey);
+    lErrorMessage << "\":" << lcb_strerror(instance, error);
     throwError("LCB0002", lErrorMessage.str().c_str());
   }
   
@@ -585,10 +634,10 @@ CouchbaseFunction::GetItemSequence::get_callback(lcb_t instance, const void *coo
   }
   else if (lType == LCB_BASE64)
   {
-    unsigned char lData[resp->v.v0.nbytes];
-    size_t lLen = resp->v.v0.nbytes;
-    memcpy(lData, resp->v.v0.bytes, lLen);
-    lRes->theItem = CouchbaseModule::getItemFactory()->createBase64Binary(&lData[0], lLen);
+    //unsigned char lData[resp->v.v0.nbytes];
+    //size_t lLen = resp->v.v0.nbytes;
+    //memcpy(lData, resp->v.v0.bytes, lLen);
+    lRes->theItem = CouchbaseModule::getItemFactory()->createBase64Binary((const char*)resp->v.v0.bytes, resp->v.v0.nbytes);
   }
   else
   {
@@ -928,6 +977,308 @@ DisconnectFunction::evaluate(
   }
 
   return ItemSequence_t(new EmptySequence());  
+}
+
+/*******************************************************************************
+ ******************************************************************************/
+
+void CouchbaseFunction::ViewItemSequence::view_callback( lcb_http_request_t request, lcb_t instance, const void* cookie, lcb_error_t error, const lcb_http_resp_t* resp)
+{
+  if (error != LCB_SUCCESS)
+  {
+    std::stringstream lErrorMessage;
+    lErrorMessage << lcb_strerror(instance, error);
+    throwError("LCB0002", lErrorMessage.str().c_str());
+  }
+
+  ViewOptions* lRes = (ViewOptions*) cookie;
+
+  String lEncoding = lRes->getEncoding();
+  String lTmp((const char*)resp->v.v0.bytes, resp->v.v0.nbytes);
+  if (transcode::is_necessary(lEncoding.c_str()))
+  {
+    transcode::stream<std::istringstream> lTranscoder(lEncoding.c_str(), lTmp.c_str());
+    lTmp.clear();
+
+    char buf[1024];
+    while (lTranscoder.good())
+    {
+      lTranscoder.read(buf, 1024);
+      lTmp.append(buf, lTranscoder.gcount());
+    }
+  }
+  lRes->theItem = CouchbaseModule::getItemFactory()->createString(lTmp);
+}
+
+void 
+CouchbaseFunction::ViewItemSequence::ViewIterator::open()
+{
+#ifdef WIN32
+  lcb_set_http_complete_callback(theInstance, ViewItemSequence::view_callback);
+#else
+  lcb_set_view_complete_callback(theInstance, ViewItemSequence::view_callback);
+#endif
+  thePaths->open();
+}
+
+void
+CouchbaseFunction::ViewItemSequence::ViewIterator::close()
+{
+  thePaths->close();
+}
+
+bool
+CouchbaseFunction::ViewItemSequence::ViewIterator::next(Item& aItem)
+{
+  Item lPath;
+  if (thePaths->next(lPath))
+  {
+    ViewOptions* lOptions = &theOptions;
+
+    lcb_http_request_t lReq;
+    lcb_http_cmd_t lCmd;
+    lCmd.v.v0.path = lPath.getStringValue().c_str();
+    lCmd.v.v0.npath = lPath.getStringValue().size();
+    lCmd.v.v0.body = NULL;
+    lCmd.v.v0.nbody = 0;
+    lCmd.v.v0.method = LCB_HTTP_METHOD_GET;
+    lCmd.v.v0.chunked = 0;
+    lCmd.v.v0.content_type = "application/json";
+    lcb_error_t err = lcb_make_http_request(theInstance, lOptions, LCB_HTTP_TYPE_VIEW, &lCmd, &lReq);
+  
+    if (err != LCB_SUCCESS)
+    {
+      throwError("LCB0002", lcb_strerror(theInstance, err));
+    }
+
+    lcb_wait(theInstance);
+
+    if (lOptions->theItem.isNull())
+      return false;
+
+    aItem = lOptions->theItem;
+
+    return true;
+  }
+  else
+  {
+    return false;
+  }
+}
+
+/*******************************************************************************
+ ******************************************************************************/
+
+zorba::ItemSequence_t
+ViewFunction::evaluate(
+  const Arguments_t& aArgs,
+  const zorba::StaticContext* aSctx,
+  const zorba::DynamicContext* aDctx) const
+{
+  String lInstanceID = getOneStringArgument(aArgs, 0);
+  lcb_t lInstance = getInstance(aDctx, lInstanceID);
+
+  Iterator_t lPaths = getIterArgument(aArgs, 1);
+  ViewOptions lOptions;
+
+  if (aArgs.size() > 2)
+  {
+    Item lOptionsArg = getOneItemArgument(aArgs, 2);
+    lOptions.setOptions(lOptionsArg);
+  }
+
+  return ItemSequence_t(new ViewItemSequence(lInstance, lPaths, lOptions));  
+}
+
+/*******************************************************************************
+ ******************************************************************************/
+
+
+zorba::ItemSequence_t
+CreateViewFunction::evaluate(
+  const Arguments_t& aArgs,
+  const zorba::StaticContext* aSctx,
+  const zorba::DynamicContext* aDctx) const
+{
+  String lInstanceID = getOneStringArgument(aArgs, 0);
+  lcb_t lInstance = getInstance(aDctx, lInstanceID);
+
+  String lDocName = getOneStringArgument(aArgs, 1);
+  String lPath = "_design/" + lDocName;
+
+  String lBody = "{\"views\": {";
+  Iterator_t lViewNames = getIterArgument(aArgs, 2);
+  Item lView;
+
+  std::vector<Item> lResult;
+
+  Iterator_t lOptions;
+  if (aArgs.size() > 3)
+  {
+    lOptions = getIterArgument(aArgs, 3);
+    Item lOption;
+    lOptions->open();
+    lViewNames->open();
+    bool lIsFirstView = true;
+    while (lViewNames->next(lView))
+    {
+      if (!lOptions->next(lOption))
+        throwError("CB0005", "The number of options is not the same as the number of views.");
+
+      //variables used to form the body
+      String lBodyKey;
+      String lBodyValues;
+      String lBodyFunction;
+
+      String lViewName = lView.getStringValue();
+      if (lOption.isJSONItem())
+      {
+        Iterator_t lKeys = lOption.getObjectKeys();
+        lKeys->open();
+        Item lKey;
+        while (lKeys->next(lKey))
+        {
+          String lStrKey = lKey.getStringValue();
+          std::transform(
+            lStrKey.begin(), lStrKey.end(),
+            lStrKey.begin(), tolower);
+          if (lStrKey == "key")
+          {
+            Item lValue = lOption.getObjectValue(lStrKey);
+            if (lValue.isJSONItem())
+            {
+              std::ostringstream lMsg;
+              lMsg << lStrKey << ": value must be of type string.";
+              throwError("CB0010", lMsg.str().c_str());
+            }
+            String lStrValue = lValue.getStringValue();
+            std::transform(
+              lStrValue.begin(), lStrValue.end(),
+              lStrValue.begin(), tolower);
+            lBodyKey = lStrValue;
+          }
+          else if (lStrKey == "values")
+          {
+            Item lValue = lOption.getObjectValue(lStrKey);
+            if (lValue.isJSONItem())
+            { 
+              lBodyValues = "[";
+              bool lIsFirstView = true;
+              int lSize = lValue.getArraySize()+1;
+              for (int i = 1; i < lSize; i++)
+              {
+                Item lArrValue = lValue.getArrayValue(i);
+                String lStrArrValue = lArrValue.getStringValue();
+                std::transform(
+                  lStrArrValue.begin(), lStrArrValue.end(),
+                  lStrArrValue.begin(), tolower);
+
+                if (lIsFirstView)
+                  lIsFirstView = false;
+                else
+                  lBodyValues += ", ";
+
+                lBodyValues += lStrArrValue;
+              }
+              lBodyValues += "]";
+            }
+            else
+            {
+              String lStrValue = lValue.getStringValue();
+              std::transform(
+                lStrValue.begin(), lStrValue.end(),
+                lStrValue.begin(), tolower);
+              lBodyValues = lStrValue;
+            }
+          }
+          else if (lStrKey == "function")
+          {
+            Item lValue = lOption.getObjectValue(lStrKey);
+            if (lValue.isJSONItem())
+            {
+              std::ostringstream lMsg;
+              lMsg << lStrKey << ": value must be of type string.";
+              throwError("CB0010", lMsg.str().c_str());
+            }
+            String lStrValue = lValue.getStringValue();
+            std::transform(
+              lStrValue.begin(), lStrValue.end(),
+              lStrValue.begin(), tolower);
+            lBodyFunction = lStrValue;
+          }
+          else
+          {
+            std::ostringstream lMsg;
+            lMsg << lStrKey << ": option not supported";
+            throwError("CB0007", lMsg.str().c_str());
+          }
+        }
+        lKeys->close();
+      }
+      if (lIsFirstView)
+        lIsFirstView = false;
+      else
+        lBody += " , ";
+      if (lBodyFunction.size() < 1)
+      {
+        if (lBodyKey.size() < 1)
+          lBodyKey = "null";
+        if (lBodyValues.size() <1)
+          lBodyValues = "null";
+        lBodyFunction = "function(meta, doc) { emit("+lBodyKey+", "+lBodyValues+")}";
+      }
+      lBody += "\"" + lViewName + "\": {\"map\": \""+lBodyFunction+"\"}";
+
+      String lStrRes = "_design/" + lDocName + "/_view/" + lViewName;
+      Item lRes = CouchbaseModule::getItemFactory()->createString(lStrRes);
+      lResult.push_back(lRes);
+
+    }
+    if (lOptions->next(lOption))
+      throwError("CB0005", "The number of options is not the same as the number of views.");
+    lViewNames->close();
+    lOptions->close();
+    lBody += "}}";
+  }
+  else
+  {
+    bool lIsFirstView = true;
+    lViewNames->open();
+    while (lViewNames->next(lView))
+    {
+      if (lIsFirstView)
+        lIsFirstView = false;
+      else
+        lBody += " , ";
+      String lViewName = lView.getStringValue();
+      lBody += "\"" + lViewName + "\": {\"map\": \"function(meta, doc) { emit(meta.id, null)}\"}";
+
+      String lStrRes = "_design/" + lDocName + "/_view/" + lViewName;
+      Item lRes = CouchbaseModule::getItemFactory()->createString(lStrRes);
+      lResult.push_back(lRes);
+
+    }
+    lViewNames->close();
+    lBody += "}}";
+  }
+
+  lcb_http_request_t lReq;
+  lcb_http_cmd_t lCmd;
+  lCmd.v.v0.path = lPath.c_str();
+  lCmd.v.v0.npath = lPath.size();
+  lCmd.v.v0.content_type = "application/json";
+  lCmd.v.v0.method = LCB_HTTP_METHOD_PUT;
+  lCmd.v.v0.body = lBody.c_str();
+  lCmd.v.v0.nbody = lBody.size();
+  lCmd.v.v0.chunked = 0;
+  lcb_error_t err = lcb_make_http_request(lInstance, NULL, LCB_HTTP_TYPE_VIEW, &lCmd, &lReq);
+
+  if (err != LCB_SUCCESS)
+    throwError("LCB0002", lcb_strerror(lInstance, err));
+
+  lcb_wait(lInstance);
+
+  return ItemSequence_t(new VectorItemSequence(lResult));  
 }
 
 
