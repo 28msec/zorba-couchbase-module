@@ -1199,7 +1199,7 @@ CreateViewFunction::evaluate(
           lBodyKey = "null";
         if (lBodyValues.size() <1)
           lBodyValues = "null";
-        lBodyFunction = "function(meta, doc) { emit("+lBodyKey+", "+lBodyValues+")}";
+        lBodyFunction = "function(doc, meta) { emit("+lBodyKey+", "+lBodyValues+");}";
       }
       lBody += "\"" + lViewName + "\": {\"map\": \""+lBodyFunction+"\"}";
 
@@ -1225,7 +1225,7 @@ CreateViewFunction::evaluate(
       else
         lBody += " , ";
       String lViewName = lView.getStringValue();
-      lBody += "\"" + lViewName + "\": {\"map\": \"function(meta, doc) { emit(meta.id, null)}\"}";
+      lBody += "\"" + lViewName + "\": {\"map\": \"function(doc, meta) { emit(meta.id, null);}\"}";
 
       String lStrRes = "_design/" + lDocName + "/_view/" + lViewName;
       Item lRes = CouchbaseModule::getItemFactory()->createString(lStrRes);
