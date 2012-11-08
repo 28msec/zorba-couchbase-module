@@ -270,7 +270,7 @@ void
       }
       catch (ZorbaException& e)
       {
-        throwError("CB0007", " expiration-time option must be an integer value");
+        throwError("CB0009", " expiration-time option must be an integer value");
       }
     }
     else if (lStrKey == "encoding")
@@ -361,7 +361,7 @@ CouchbaseFunction::PutOptions::setOptions(Item& aOptions)
       }
       catch (ZorbaException& e)
       {
-        throwError("CB0007", " expiration-time option must be an integer value");
+        throwError("CB0009", " expiration-time option must be an integer value");
       }
     }
     else if (lStrKey == "encoding")
@@ -477,6 +477,12 @@ ConnectFunction::evaluate(
       else if (lStrKey == "bucket")
       {
         lBucket = lOptions.getObjectValue(lStrKey);
+      }
+      else
+      {
+        std::ostringstream lMsg;
+        lMsg << lStrKey << ": option not supported";
+        throwError("CB0007", lMsg.str().c_str());
       }
     }
     lKeys->close();
@@ -905,8 +911,15 @@ TouchFunction::evaluate(
   lcb_t lInstance = getInstance(aDctx, lInstanceID);
   Iterator_t lKeys = getIterArgument(aArgs, 1);
   Item lExp = getOneItemArgument(aArgs, 2);
-  unsigned int lInt = lExp.getUnsignedIntValue();
-
+  unsigned int lInt;
+  try
+  {
+    lInt = lExp.getUnsignedIntValue();
+  }
+  catch (ZorbaException& e)
+  {
+    throwError("CB0009", " expiration-time option must be an integer value");
+  }
   lcb_error_t lError;
   Item lKey;
   lKeys->open();
