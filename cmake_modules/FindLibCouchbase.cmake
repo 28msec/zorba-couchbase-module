@@ -18,17 +18,15 @@ ENDIF (LIBCOUCHBASE_INCLUDE_DIR)
 
 FIND_PATH (
   LIBCOUCHBASE_INCLUDE_DIR
-  couchbase.h
-  PATHS ${LIBCOUCHBASE_INCLUDE_DIR} /usr/include/ /usr/local/include /opt/local/include )
+  libcouchbase/couchbase.h
+  PATHS /opt/local/include)
 MARK_AS_ADVANCED (LIBCOUCHBASE_INCLUDE_DIR)
 
 FIND_LIBRARY (
   LIBCOUCHBASE_LIBRARY
-  NAMES libcouchbase libcouchbase.so
-  PATHS ${LIBCOUCHBASE_LIBRARY_DIR} /usr/lib /usr/local/lib /opt/local/lib)
+  NAMES couchbase
+  PATHS /opt/local/lib)
 MARK_AS_ADVANCED (LIBCOUCHBASE_LIBRARY)
-
-MESSAGE(STATUS ">>>>>>>>>>>${LIBCOUCHBASE_LIBRARY}")
 
 IF (LIBCOUCHBASE_INCLUDE_DIR AND LIBCOUCHBASE_LIBRARY)
   SET (LIBCOUCHBASE_FOUND 1)

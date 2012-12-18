@@ -1000,11 +1000,7 @@ void CouchbaseFunction::ViewItemSequence::view_callback( lcb_http_request_t requ
 void 
 CouchbaseFunction::ViewItemSequence::ViewIterator::open()
 {
-#ifdef WIN32
   lcb_set_http_complete_callback(theInstance, ViewItemSequence::view_callback);
-#else
-  lcb_set_view_complete_callback(theInstance, ViewItemSequence::view_callback);
-#endif
   thePaths->open();
 }
 
