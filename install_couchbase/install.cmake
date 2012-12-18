@@ -21,7 +21,7 @@
 #Figure out what directory we're running in
 get_filename_component(cwd ${CMAKE_CURRENT_LIST_FILE} PATH)
 
-FIND_PROGRAM(WGET_FOUND wget DOC "tool for downloading couchbase server")
+FIND_PROGRAM(WGET wget DOC "tool for downloading couchbase server")
 
 IF(SKIP_COUCHBASE_DOWNLOAD)
   SET(COUCHBASE_DOWNLOAD OFF)
@@ -48,19 +48,27 @@ ENDIF(SKIP_COUCHBASE_DOWNLOAD)
 
 #Couchbase Download
 IF(COUCHBASE_DOWNLOAD)
-  IF(WGET_FOUND)
+  IF(WGET)
   MESSAGE(STATUS "wget found")
   MESSAGE(STATUS "Starting Download...")
-  EXECUTE_PROCESS(COMMAND wget "${DOWNLOAD_PATH}/${COUCHBASE_DEB_NAME}")
-  ELSE(WGET_FOUND)
+  EXECUTE_PROCESS(COMMAND "${WGET}" "${DOWNLOAD_PATH}/${COUCHBASE_DEB_NAME}")
+  ELSE(WGET)
   MESSAGE(FATAL_ERROR "Wget was not found, cannot download Couchbase Server")
-  ENDIF(WGET_FOUND)
+  ENDIF(WGET)
 ENDIF(COUCHBASE_DOWNLOAD)
 
 #Couchbase Install
-MESSAGE(STATUS "Starting Couchbase Server Installation...")
+MESSAGE(STATUS "Installing Couchbase Server...")
 EXECUTE_PROCESS(COMMAND sudo dpkg -i ${COUCHBASE_DEB_NAME})
 EXECUTE_PROCESS(COMMAND sudo apt-get install -f)
+
+#Couchbase C SDK Install
+MESSAGE(STATUS "Installing Couchbase C SDK...")
+EXECUTE_PROCESS(COMMAND sudo "${WGET}" -O/etc/apt/sources.list.d/couchbase.list http://packages.couchbase.com/ubuntu/couchbase-ubuntu1110.list)
+EXECUTE_PROCESS(COMMAND "${WGET}" -O- http://packages.couchbase.com/ubuntu/couchbase.key
+  COMMAND sudo apt-key add -)
+EXECUTE_PROCESS(COMMAND apt-get update)
+EXECUTE_PROCESS(COMMAND apt-get install libcouchbase2 libcouchbase-dev)
 
 #Couchbase Setup
 MESSAGE(STATUS "Starting Setup...")
