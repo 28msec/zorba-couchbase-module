@@ -60,6 +60,7 @@ ENDIF(COUCHBASE_DOWNLOAD)
 #Couchbase Install
 MESSAGE(STATUS "Starting Couchbase Server Installation...")
 EXECUTE_PROCESS(COMMAND sudo dpkg -i ${COUCHBASE_DEB_NAME})
+EXECUTE_PROCESS(COMMAND sudo apt-get install -f)
 
 #Couchbase Setup
 MESSAGE(STATUS "Starting Setup...")
