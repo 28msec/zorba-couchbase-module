@@ -46,8 +46,8 @@ ELSE (ZORBA_SUPRESS_LIBCOUCHBASE)
 
     ADD_SUBDIRECTORY("src")
     ADD_TEST_DIRECTORY("${PROJECT_SOURCE_DIR}/test")
-  ELSE (LIBARCHIVE_FOUND)
-    MESSAGE (STATUS "LibCouchbase library not found == if you want to use the archive functionality please set LIBCOUCHBASE_INCLUDE_DIR and LIBCOUCHBASE_LIBRARIES cmake parameters accordingly.")
+  ELSE (LIBCOUCHBASE_FOUND)
+    MESSAGE (STATUS "LibCouchbase library not found; couchbase module skipped")
   ENDIF (LIBCOUCHBASE_FOUND)
 ENDIF (ZORBA_SUPPRESS_LIBCOUCHBASE)
 
