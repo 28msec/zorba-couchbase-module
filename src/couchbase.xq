@@ -427,7 +427,7 @@ as xs:string* external;
  : @return the names of the paths for the views that have been
  :   created.
  :)
-declare %an:sequential cb:create-view(
+declare %an:sequential function cb:create-view(
   $db as xs:anyURI,
   $doc-name as xs:string,
   $view-names as xs:string*,
