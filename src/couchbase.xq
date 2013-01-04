@@ -105,6 +105,8 @@ declare %an:sequential function cb:connect($options as object())
  :
  : @error cb:LCB0002 if any error occurs in the communication with
  :   the server.
+ :
+ : @return a empty sequence.
  :)
 declare %an:sequential function cb:disconnect($db as xs:anyURI)
   as empty-sequence() external;
@@ -200,6 +202,7 @@ as xs:base64Binary* external;
  :
  : @error cb:LCB0002 if any error occurs in the communication with
  :   the server.
+ : @return a empty sequence.
  :)
 declare %an:sequential function cb:remove($db as xs:anyURI, $key as xs:string*)
     as empty-sequence() external;
@@ -218,6 +221,7 @@ declare %an:sequential function cb:remove($db as xs:anyURI, $key as xs:string*)
  :   the server.
  : @error cb:CB0005 if the number of keys doesn't match the number
  :   of values.
+ : @return a empty sequence.
  :)  
 declare %an:sequential function cb:put-text(
   $db as xs:anyURI,
@@ -249,7 +253,9 @@ as empty-sequence()
  :   of values.
  : @error cb:CB0006 if the given encoding is not supported.
  : @error cb:CB0007 if any of the options is not supported.
- : @error cb:CB0009 if the given expiration time is not an xs:integer.
+ : @error cb:CB0009 if the given expiration time is not an xs:integer. 
+ :
+ : @return a empty sequence.
  :)  
 declare %an:sequential function cb:put-text(
             $db as xs:anyURI,
@@ -269,6 +275,8 @@ declare %an:sequential function cb:put-text(
  :   the server.
  : @error cb:CB0005 if the number of keys doesn't match the number
  :   of values.
+ :
+ : @return a empty sequence.
  :)  
 declare %an:sequential function cb:put-binary(
   $db as xs:anyURI,
@@ -298,6 +306,8 @@ as empty-sequence()
  :   of values.
  : @error cb:CB0007 if any of the options is not supported.
  : @error cb:CB0009 if the given expiration time is not an xs:integer.
+ :
+ : @return a empty sequence.
  :)  
 declare %an:sequential function cb:put-binary(
   $db as xs:anyURI,
@@ -314,6 +324,8 @@ as empty-sequence() external;
  :
  : @error cb:LCB0002 if any error occurs in the communication with
  :   the server.
+ :
+ : @return a empty sequence.
  :)
 declare %an:sequential function cb:flush($db as xs:anyURI)
 as empty-sequence() external;
@@ -327,6 +339,8 @@ as empty-sequence() external;
  :
  : @error cb:LCB0002 if any error occurs in the communication with
  :   the server.
+ :
+ : @return a empty sequence.
  :)
 declare %an:sequential function cb:touch(
   $db as xs:anyURI,
