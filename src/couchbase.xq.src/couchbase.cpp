@@ -85,7 +85,7 @@ zorba::ExternalFunction*
     {
       lFunc = new TouchFunction(this);
     }
-    else if (localname == "view")
+    else if (localname == "view-text")
     {
       lFunc = new ViewFunction(this);
     }

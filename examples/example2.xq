@@ -8,7 +8,7 @@ variable $instance := cb:connect({
   "bucket" : "default"});
 
 variable $view-name := cb:create-view($instance, "zip", "zip", {"key" : "doc.state", "values" : "doc.pop"});
-variable $data := jn:parse-json(cb:view($instance, $view-name))("rows");
+variable $data := cb:view($instance, $view-name)("rows");
 for $d in jn:members($data)
 let $state := $d("key")
 group by $state

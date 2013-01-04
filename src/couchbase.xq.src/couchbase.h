@@ -552,7 +552,7 @@ class ViewFunction : public CouchbaseFunction
     virtual ~ViewFunction(){}
 
     virtual zorba::String
-      getLocalName() const { return "view"; }
+      getLocalName() const { return "view-text"; }
 
     virtual zorba::ItemSequence_t
       evaluate( const Arguments_t&,
