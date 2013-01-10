@@ -970,7 +970,11 @@ DisconnectFunction::evaluate(
 
 /*******************************************************************************
  ******************************************************************************/
-
+static void streamReleaser(std::istream* aStream)
+{
+  delete aStream;
+}
+  
 void CouchbaseFunction::ViewItemSequence::view_callback( lcb_http_request_t request, lcb_t instance, const void* cookie, lcb_error_t error, const lcb_http_resp_t* resp)
 {
   if (error != LCB_SUCCESS)
@@ -981,26 +985,39 @@ void CouchbaseFunction::ViewItemSequence::view_callback( lcb_http_request_t requ
   ViewOptions* lRes = (ViewOptions*) cookie;
 
   String lEncoding = lRes->getEncoding();
-  String lTmp((const char*)resp->v.v0.bytes, resp->v.v0.nbytes);
-  if (transcode::is_necessary(lEncoding.c_str()))
+  if (resp->v.v0.nbytes > 0)
   {
-    transcode::stream<std::istringstream> lTranscoder(lEncoding.c_str(), lTmp.c_str());
-    lTmp.clear();
+    String lTmp = String((const char*)resp->v.v0.bytes, resp->v.v0.nbytes);
 
-    char buf[1024];
-    while (lTranscoder.good())
+    if (transcode::is_necessary(lEncoding.c_str()))
     {
-      lTranscoder.read(buf, 1024);
-      lTmp.append(buf, lTranscoder.gcount());
+      transcode::stream<std::istringstream> lTranscoder(lEncoding.c_str(), lTmp.c_str());
+      lTmp.clear();
+
+      char buf[1024];
+      while (lTranscoder.good())
+      {
+        lTranscoder.read(buf, 1024);
+        lTmp.append(buf, lTranscoder.gcount());
+      }
+    }
+    
+    if(!lRes->theStream)
+    {
+      lRes->theStream = new std::unique_ptr<std::stringstream>(new std::stringstream(lTmp.str()));
+
+    }
+    else
+    {
+      lRes->theStream->get()->write((const char*)resp->v.v0.bytes, resp->v.v0.nbytes);
     }
   }
-  lRes->theItem = CouchbaseModule::getItemFactory()->createString(lTmp);
 }
 
 void 
 CouchbaseFunction::ViewItemSequence::ViewIterator::open()
 {
-  lcb_set_http_complete_callback(theInstance, ViewItemSequence::view_callback);
+  lcb_set_view_complete_callback(theInstance, ViewItemSequence::view_callback);
   thePaths->open();
 }
 
@@ -1017,9 +1034,10 @@ CouchbaseFunction::ViewItemSequence::ViewIterator::next(Item& aItem)
   if (thePaths->next(lPath))
   {
     ViewOptions* lOptions = &theOptions;
-
+    
     lcb_http_request_t lReq;
     lcb_http_cmd_t lCmd;
+    lCmd.version = 0;
     lCmd.v.v0.path = lPath.getStringValue().c_str();
     lCmd.v.v0.npath = lPath.getStringValue().size();
     lCmd.v.v0.body = NULL;
@@ -1036,10 +1054,11 @@ CouchbaseFunction::ViewItemSequence::ViewIterator::next(Item& aItem)
 
     lcb_wait(theInstance);
 
-    if (lOptions->theItem.isNull())
-      return false;
+    if (lOptions->theStream)
+      aItem = CouchbaseModule::getItemFactory()->createStreamableString(*lOptions->theStream->release(), &streamReleaser);
 
-    aItem = lOptions->theItem;
+    if (aItem.isNull())
+      return false;
 
     return true;
   }

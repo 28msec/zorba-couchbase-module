@@ -93,15 +93,15 @@ class CouchbaseFunction : public ContextualExternalFunction
         String thePath;
 
       public:
-        Item theItem;
+        std::unique_ptr<std::stringstream>* theStream;
 
-        ViewOptions() : theEncoding("UTF-8"), thePath("") {}
+        ViewOptions() : theEncoding("UTF-8"), thePath("") { theStream = NULL; }
 
         ViewOptions(String& aPath) : theEncoding("UTF-8"), thePath(aPath) {}
 
         void setOptions(Item& aOptions);
 
-        ~ViewOptions() {}
+        ~ViewOptions() { if(theStream) delete theStream; }
 
         String getEncoding() { return theEncoding; }
 
