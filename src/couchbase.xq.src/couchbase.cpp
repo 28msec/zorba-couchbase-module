@@ -977,20 +977,18 @@ void CouchbaseFunction::ViewItemSequence::view_callback( lcb_http_request_t requ
     
     if(!lRes->theStream)
     {
-      lRes->theStream = new std::unique_ptr<std::stringstream>(new std::stringstream(lTmp.str()));
+      lRes->theStream = new std::unique_ptr<std::stringstream>(new std::stringstream(""));
+    }
 
-    }
-    else
-    {
-      lRes->theStream->get()->write((const char*)resp->v.v0.bytes, resp->v.v0.nbytes);
-    }
+    *(lRes->theStream->get()) << lTmp.c_str();
+    
   }
 }
 
 void 
 CouchbaseFunction::ViewItemSequence::ViewIterator::open()
 {
-  lcb_set_view_complete_callback(theInstance, ViewItemSequence::view_callback);
+  lcb_set_http_data_callback(theInstance, ViewItemSequence::view_callback);
   thePaths->open();
 }
 
@@ -1016,7 +1014,7 @@ CouchbaseFunction::ViewItemSequence::ViewIterator::next(Item& aItem)
     lCmd.v.v0.body = NULL;
     lCmd.v.v0.nbody = 0;
     lCmd.v.v0.method = LCB_HTTP_METHOD_GET;
-    lCmd.v.v0.chunked = 0;
+    lCmd.v.v0.chunked = 1;
     lCmd.v.v0.content_type = "application/json";
     lcb_error_t err = lcb_make_http_request(theInstance, lOptions, LCB_HTTP_TYPE_VIEW, &lCmd, &lReq);
   

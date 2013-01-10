@@ -8,11 +8,11 @@ variable $instance := cb:connect({
   "bucket" : "default"});
 
 variable $view-name := cb:create-view($instance, "zip", "zip", {"key" : "doc.state", "values" : ["doc.pop", "doc.city"]});
-variable $data := cb:view($instance, $view-name)("rows");
+variable $data := cb:view($instance, $view-name);
 
 
 let $city-pop :=
-  for $d in jn:members($data)
+  for $d in jn:members($data("rows"))
   let $state := $d("key")
   let $pop := $d("value")(1)
   let $city := $d("value")(2)
