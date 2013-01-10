@@ -32,6 +32,7 @@ xquery version "3.0";
  :)
 module namespace cb = "http://www.zorba-xquery.com/modules/couchbase";
 
+declare namespace jn = "http://jsoniq.org/functions";
 declare namespace an = "http://www.zorba-xquery.com/annotations";
 
 declare namespace ver = "http://www.zorba-xquery.com/options/versioning";
