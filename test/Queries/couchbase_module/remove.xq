@@ -9,5 +9,4 @@ variable $instance := cb:connect({
 cb:put-text($instance, "remove", "foo");
 cb:remove($instance, "remove");
 variable $result := cb:get-text($instance, "remove");
-cb:disconnect($instance);
 $result

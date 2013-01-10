@@ -9,5 +9,4 @@ variable $instance := cb:connect({
 cb:put-text($instance, "append", "foo");
 cb:put-text($instance, "append", "foo2", { "operation" : "append" });
 variable $result := cb:get-text($instance, "append");
-cb:disconnect($instance);
 $result

@@ -9,5 +9,4 @@ variable $instance := cb:connect({
 cb:put-text($instance, "touch", "foo");
 cb:touch($instance, "touch", 1);
 variable $result := cb:get-text($instance, "touch");
-cb:disconnect($instance);
 $result

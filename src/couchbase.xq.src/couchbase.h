@@ -523,26 +523,6 @@ class TouchFunction : public CouchbaseFunction
 /*******************************************************************************
  ******************************************************************************/
 
-class DisconnectFunction : public CouchbaseFunction
-{
-  public:
-    DisconnectFunction(const CouchbaseModule* aModule)
-      : CouchbaseFunction(aModule) {}
-
-    virtual ~DisconnectFunction(){}
-
-    virtual zorba::String
-      getLocalName() const { return "disconnect"; }
-
-    virtual zorba::ItemSequence_t
-      evaluate( const Arguments_t&,
-                const zorba::StaticContext*,
-                const zorba::DynamicContext*) const;
-};
-
-/*******************************************************************************
- ******************************************************************************/
-
 class ViewFunction : public CouchbaseFunction
 {
   public:

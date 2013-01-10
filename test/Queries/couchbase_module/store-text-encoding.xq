@@ -8,7 +8,6 @@ variable $instance := cb:connect({
 
 cb:put-text($instance, "encoding", "äüö", { "encoding" : "ISO-8859-1" });
 variable $result := cb:get-text($instance, "encoding", { "encoding" : "ISO-8859-1" });
-cb:disconnect($instance);
 if ($result = "äüö")
 then true()
 else false()

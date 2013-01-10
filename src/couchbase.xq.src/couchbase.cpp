@@ -73,10 +73,6 @@ zorba::ExternalFunction*
     {
       lFunc = new RemoveFunction(this);
     }
-    else if (localname == "disconnect")
-    {
-      lFunc = new DisconnectFunction(this);
-    }
     else if (localname == "flush")
     {
       lFunc = new FlushFunction(this);
@@ -941,29 +937,6 @@ TouchFunction::evaluate(
     lcb_wait(lInstance);
   }
   lKeys->close();
-
-  return ItemSequence_t(new EmptySequence());  
-}
-
-/*******************************************************************************
- ******************************************************************************/
-
-zorba::ItemSequence_t
-DisconnectFunction::evaluate(
-  const Arguments_t& aArgs,
-  const zorba::StaticContext* aSctx,
-  const zorba::DynamicContext* aDctx) const
-{
-  String lInstanceID = getOneStringArgument(aArgs, 0);
-  
-  InstanceMap* lInstanceMap;
-  if ((lInstanceMap = dynamic_cast<InstanceMap*>(aDctx->getExternalFunctionParameter("couchbaseInstanceMap"))))
-  {
-    if (lInstanceMap->deleteInstance(lInstanceID))
-      return ItemSequence_t(new EmptySequence());
-  }
-
-  throwError("CB0000", "No instance of couchbase with the given identifier was found.");
 
   return ItemSequence_t(new EmptySequence());  
 }

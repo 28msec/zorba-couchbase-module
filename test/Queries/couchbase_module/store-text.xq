@@ -8,5 +8,4 @@ variable $instance := cb:connect({
 
 cb:put-text($instance, "key1", "foo");
 variable $result := cb:get-text($instance, "key1");
-cb:disconnect($instance);
 $result

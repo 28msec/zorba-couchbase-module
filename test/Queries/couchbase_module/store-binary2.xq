@@ -10,5 +10,4 @@ variable $instance := cb:connect({
 variable $binary := f:read-binary(resolve-uri("connect.xq"));
 cb:put-binary($instance, "binary-file", $binary);
 variable $result := cb:get-text($instance, "binary-file");
-cb:disconnect($instance);
 $result

@@ -98,20 +98,6 @@ declare %an:sequential function cb:connect($options as object())
     as xs:anyURI external;
 
 (:~
- : Disconnect from the server/bucket identified by the given
- : URI.
- :
- : @param $db connection reference
- :
- : @error cb:LCB0002 if any error occurs in the communication with
- :   the server.
- :
- : @return a empty sequence.
- :)
-declare %an:sequential function cb:disconnect($db as xs:anyURI)
-  as empty-sequence() external;
-
-(:~
  : Return the values of the given keys (type xs:string) as string.
  : 
  : @param $db connection reference
