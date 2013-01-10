@@ -347,14 +347,15 @@ as empty-sequence() external;
  :
  : @return a sequence of strings (as JSON) containing information of the views.
  :)
-declare %fn:private %an:sequential function cb:view-text($db as xs:anyURI, $path as xs:string*)
-  as xs:string* external;
-
 declare %an:sequential function cb:view($db as xs:anyURI, $path as xs:string*)
   as object()*
 {
   jn:parse-json(cb:view-text($db, $path))
 };
+
+declare %fn:private %an:sequential function cb:view-text($db as xs:anyURI, $path as xs:string*)
+  as xs:string* external;
+
 
 (:~
  : Retrieve the content of existing views.
@@ -373,12 +374,6 @@ declare %an:sequential function cb:view($db as xs:anyURI, $path as xs:string*)
  :
  : @return a sequence of strings (as JSON) containing information of the views.
  :)
-declare %fn:private %an:sequential function cb:view-text(
-  $db as xs:anyURI,
-  $path as xs:string*,
-  $options as object())
-as xs:string* external; 
-
 declare %an:sequential function cb:view(
   $db as xs:anyURI,
   $path as xs:string*,
@@ -387,6 +382,13 @@ as object()*
 {
   jn:parse-json(cb:view-text($db, $path, $options))
 };
+
+declare %fn:private %an:sequential function cb:view-text(
+  $db as xs:anyURI,
+  $path as xs:string*,
+  $options as object())
+as xs:string* external; 
+
 
 (:~
  : Create a document/view.
