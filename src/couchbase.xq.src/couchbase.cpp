@@ -190,6 +190,30 @@ CouchbaseFunction::getInstance(const DynamicContext* aDctx, const String& aIdent
   return NULL;
 }
 
+String
+  CouchbaseFunction::ViewOptions::getPathOptions()
+{
+  String lPathOptions("?");
+  bool lAmp = false;
+  if (theStaleOption != "")
+  {
+    lPathOptions.append(theStaleOption);
+    lAmp = true;
+  }
+  if (theLimitOption != "")
+  {
+    if(lAmp)
+      lPathOptions.append("&");
+    lPathOptions.append(theLimitOption);
+    lAmp = true;
+  }
+
+  if (lPathOptions == "?")
+    lPathOptions = "";
+
+  return lPathOptions;
+}
+
 void
   CouchbaseFunction::ViewOptions::setOptions(Item& aOptions)
 {
@@ -215,6 +239,42 @@ void
         lMsg << theEncoding << ": unsupported encoding";
         throwError("CB0006", lMsg.str().c_str());
       }
+    }
+    else if (lStrKey == "stale")
+    {
+      Item lValue = aOptions.getObjectValue(lStrKey);
+      String lString = lValue.getStringValue();
+      if (lString == "false")
+      {
+        theStaleOption ="stale=false";
+      }
+      else if (lString == "ok")
+      {
+        theStaleOption ="stale=ok";
+      }
+      else if (lString == "update_after")
+      {
+        theStaleOption ="stale=update_after";
+      }
+      else
+      {
+        std::ostringstream lMsg;
+        lMsg << lStrKey << "=" << lString << ": option not supported";
+        throwError("CB0007", lMsg.str().c_str());
+      }
+    }
+    else if (lStrKey == "limit")
+    {
+      Item lValue = aOptions.getObjectValue(lStrKey);
+      try
+      {
+        int lLimit = lValue.getIntValue();
+        theLimitOption = "limit=" + lLimit;  
+      }
+      catch (ZorbaException& e)
+      {
+        throwError("CB0009", " limit option must be an integer value");
+      } 
     }
     else
     {
@@ -1005,19 +1065,25 @@ CouchbaseFunction::ViewItemSequence::ViewIterator::next(Item& aItem)
   if (thePaths->next(lPath))
   {
     ViewOptions* lOptions = &theOptions;
-    
+    String lPathOptions = lOptions->getPathOptions();
+    String lPathString = lPath.getStringValue();    
+    if (lPathOptions != "")
+    {
+      lPathString.append(lPathOptions);
+    }    
+    std::cout << lPathString.c_str() << " " << lPathString.size();
     lcb_http_request_t lReq;
     lcb_http_cmd_t lCmd;
     lCmd.version = 0;
-    lCmd.v.v0.path = lPath.getStringValue().c_str();
-    lCmd.v.v0.npath = lPath.getStringValue().size();
+    lCmd.v.v0.path = lPathString.c_str();
+    lCmd.v.v0.npath = lPathString.size();
     lCmd.v.v0.body = NULL;
     lCmd.v.v0.nbody = 0;
     lCmd.v.v0.method = LCB_HTTP_METHOD_GET;
     lCmd.v.v0.chunked = 1;
     lCmd.v.v0.content_type = "application/json";
     lcb_error_t err = lcb_make_http_request(theInstance, lOptions, LCB_HTTP_TYPE_VIEW, &lCmd, &lReq);
-  
+    std::cout << lCmd.v.v0.path;
     if (err != LCB_SUCCESS)
     {
       libCouchbaseError (theInstance, err);

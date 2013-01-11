@@ -7,7 +7,7 @@ variable $instance := cb:connect({
   "password" : null,
   "bucket" : "default"});
 variable $view-name := cb:create-view($instance, "zip", "zip", {"key" : "doc.state", "values" : "doc.pop"});
-variable $data := cb:view($instance, $view-name);
+variable $data := cb:view($instance, $view-name, {"stale" : "false"});
 for $d in jn:members($data("rows"))
 let $state := $d("key")
 group by $state

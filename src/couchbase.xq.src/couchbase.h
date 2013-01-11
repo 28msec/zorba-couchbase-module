@@ -91,11 +91,13 @@ class CouchbaseFunction : public ContextualExternalFunction
       protected:
         String theEncoding;
         String thePath;
+        String theStaleOption;
+        String theLimitOption;
 
       public:
         std::unique_ptr<std::stringstream>* theStream;
 
-        ViewOptions() : theEncoding("UTF-8"), thePath("") { theStream = NULL; }
+        ViewOptions() : theEncoding("UTF-8"), thePath(""), theStaleOption(""), theLimitOption("") { theStream = NULL; }
 
         ViewOptions(String& aPath) : theEncoding("UTF-8"), thePath(aPath) {}
 
@@ -106,6 +108,8 @@ class CouchbaseFunction : public ContextualExternalFunction
         String getEncoding() { return theEncoding; }
 
         String getPath() { return thePath; }
+
+        String getPathOptions();
     };
 
     class GetOptions
@@ -137,7 +141,8 @@ class CouchbaseFunction : public ContextualExternalFunction
     class PutOptions
     {
       protected:
-        
+
+
         lcb_storage_t theOperation;
         lcb_storage_type_t theType;
         unsigned int theExpTime;
@@ -145,7 +150,7 @@ class CouchbaseFunction : public ContextualExternalFunction
 
       public:
 
-        PutOptions() : theOperation(LCB_ADD), theType(LCB_JSON), theExpTime(0), theEncoding("") { }
+        PutOptions() : theOperation(LCB_ADD), theType(LCB_JSON), theExpTime(0), theEncoding(""){ }
 
         PutOptions(lcb_storage_type_t aType) : theOperation(LCB_SET), theType(aType), theExpTime(0) { }
 

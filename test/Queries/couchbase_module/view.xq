@@ -6,9 +6,11 @@ variable $instance := cb:connect({
   "password" : null,
   "bucket" : "default"});
 
+cb:remove($instance, "view");
 cb:put-text($instance, "view", '{ "view" : 1 }');
 
-variable $view-name := cb:create-view($instance, "test-view", "test", {"key":"doc.view"});
+variable $view-name := cb:create-view($instance, "test-view", "test13", {"key":"doc.view"});
+
 
 variable $data := cb:view($instance, $view-name);
 for $d in jn:members($data("rows"))

@@ -365,8 +365,16 @@ declare %fn:private %an:sequential function cb:view-text($db as xs:anyURI, $path
  :        (e.g. "_design/test/_view/vies").
  : @param $options JSONiq object with additional options
  :
- : @option "encoding" string with the name of the encoding of the returned
- :   strings (if not UTF-8).
+ : @option Json object whith options for the querying the view. available options:
+ :         "encoding" string with the name of the encoding of the returned
+ :         strings (if not UTF-8).
+ :         "stale" option's value is a string with the type of stale to be used. 
+ :         Valid values:
+ :           "ok" : the view is not updated
+ :           "false" : the view is updated before the function view is executed
+ :           "update_after" : the view is updated after the call of view
+ :         "limit" option's value is an integer which sets a number of how many 
+ :         rows the view will show.  
  :
  : @error cb:LCB0002 if any error occurs in the communication with
  :   the server.
