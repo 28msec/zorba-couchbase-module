@@ -7,13 +7,13 @@ variable $instance := cb:connect({
   "bucket" : "default"});
 
 cb:remove($instance, "view");
-cb:put-text($instance, "view", '{ "view" : 1 }');
+cb:put-text($instance, "view", '{ "view" : 1 }', { "wait" : "persist" });
 
-variable $view-name := cb:create-view($instance, "test-view", "test13", {"key":"doc.view"});
+variable $view-name := cb:create-view($instance, "test-view", "test", {"key":"doc.view"});
 
 
-variable $data := cb:view($instance, $view-name);
+variable $data := cb:view($instance, $view-name, {"stale" : "false"});
 for $d in jn:members($data("rows"))
-where $d("key") >0
+where $d("key") > 0
 return $d
 

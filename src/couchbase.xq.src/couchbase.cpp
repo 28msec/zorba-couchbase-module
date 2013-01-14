@@ -431,6 +431,28 @@ CouchbaseFunction::PutOptions::setOptions(Item& aOptions)
             throwError("CB0006", lMsg.str().c_str());
       }
     }
+    else if (lStrKey == "wait")
+    {
+      Item lValue = aOptions.getObjectValue(lStrKey);
+      String lStrValue = lValue.getStringValue();
+      std::transform(
+        lStrValue.begin(), lStrValue.end(),
+        lStrValue.begin(), tolower);
+      if (lStrValue == "persist")
+      {
+        theWaitType = CB_WAIT_PERSIST;
+      }
+      else if (lStrValue == "false")
+      {
+        theWaitType = CB_WAIT_FALSE;
+      }
+      else
+      {
+        std::ostringstream lMsg;
+        lMsg << lStrKey << "=" << lStrValue << " : option not supported";
+        throwError("CB0007", lMsg.str().c_str());
+      }
+    }
     else
     {
       std::ostringstream lMsg;
@@ -791,6 +813,26 @@ GetBinaryFunction::evaluate(
 /*******************************************************************************
  ******************************************************************************/
 
+void CouchbaseFunction::observe_callback(lcb_t instance, const void *cookie, lcb_error_t error, const lcb_observe_resp_t *resp)
+{
+  if (error != LCB_SUCCESS)
+  {
+    libCouchbaseError (instance, error);
+  }
+  
+  PutOptions* lWait = (PutOptions*) cookie;
+  //verify is coming from the master
+  if (resp->v.v0.from_master > 0)
+  {
+    lcb_observe_t lStatus = resp->v.v0.status;if (lStatus == LCB_OBSERVE_NOT_FOUND)
+    {
+      throwError("CB0011", "Variable stored not found.");
+    }
+    //check for flag of persisntancy
+    lWait->setWaiting(lStatus & LCB_OBSERVE_PERSISTED?false:true);
+  }
+}
+
 void CouchbaseFunction::put (lcb_t aInstance, Iterator_t aKeys, Iterator_t aValues, PutOptions aOptions)
 {
   lcb_error_t lError;
@@ -860,9 +902,23 @@ void CouchbaseFunction::put (lcb_t aInstance, Iterator_t aKeys, Iterator_t aValu
     {
       libCouchbaseError (aInstance, lError);
     } 
-
-
+    //Wait for store
     lcb_wait(aInstance);
+    //Check if wait for disk
+    if (aOptions.getWaitType() != CB_WAIT_FALSE)
+    {     
+      lcb_set_observe_callback(aInstance, observe_callback);
+      PutOptions* lOptions = &aOptions;
+      do {
+        lcb_observe_cmd_t lObserve;
+        lObserve.version = 0;
+        lObserve.v.v0.key = lStrKey.c_str();
+        lObserve.v.v0.nkey = lStrKey.size();
+        lcb_observe_cmd_t* lCommands[1] = { &lObserve };
+        lcb_observe(aInstance, lOptions, 1, lCommands);
+        lcb_wait(aInstance);
+      }while(lOptions->isWaiting());
+    }
   }
 
   if (aValues->next(lValue))
@@ -1071,7 +1127,6 @@ CouchbaseFunction::ViewItemSequence::ViewIterator::next(Item& aItem)
     {
       lPathString.append(lPathOptions);
     }    
-    std::cout << lPathString.c_str() << " " << lPathString.size();
     lcb_http_request_t lReq;
     lcb_http_cmd_t lCmd;
     lCmd.version = 0;
@@ -1083,7 +1138,6 @@ CouchbaseFunction::ViewItemSequence::ViewIterator::next(Item& aItem)
     lCmd.v.v0.chunked = 1;
     lCmd.v.v0.content_type = "application/json";
     lcb_error_t err = lcb_make_http_request(theInstance, lOptions, LCB_HTTP_TYPE_VIEW, &lCmd, &lReq);
-    std::cout << lCmd.v.v0.path;
     if (err != LCB_SUCCESS)
     {
       libCouchbaseError (theInstance, err);
