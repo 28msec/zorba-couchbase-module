@@ -89,6 +89,10 @@ zorba::ExternalFunction*
     {
       lFunc = new CreateViewFunction(this);
     }
+    else if (localname == "delete-view")
+    {
+      lFunc = new DeleteViewFunction(this);
+    }
   }
 
   return lFunc;
@@ -1185,8 +1189,46 @@ ViewFunction::evaluate(
 
 /*******************************************************************************
  ******************************************************************************/
+zorba::ItemSequence_t
+DeleteViewFunction::evaluate(
+  const Arguments_t& aArgs,
+  const zorba::StaticContext* aSctx,
+  const zorba::DynamicContext* aDctx) const
+{
+  String lInstanceID = getOneStringArgument(aArgs, 0);
+  lcb_t lInstance = getInstance(aDctx, lInstanceID);
 
+  Iterator_t lDocNames = getIterArgument(aArgs, 1);
+  Item lDoc;  
+  lDocNames->open();
+  while(lDocNames->next(lDoc))
+  {
+    String lPath = "_design/" + lDoc.getStringValue();
+    lcb_http_request_t req;
+    lcb_http_cmd_t cmd;
+    cmd.version = 0;
+    cmd.v.v0.path = lPath.c_str();
+    cmd.v.v0.npath = lPath.size();
+    cmd.v.v0.body = NULL;
+    cmd.v.v0.nbody = 0;
+    cmd.v.v0.method = LCB_HTTP_METHOD_DELETE;
+    cmd.v.v0.chunked = false;
+    cmd.v.v0.content_type = "application/json";
+    lcb_error_t err = lcb_make_http_request(lInstance, NULL,
+                           LCB_HTTP_TYPE_VIEW, &cmd, &req);
 
+    if (err != LCB_SUCCESS)
+    libCouchbaseError (lInstance, err);
+
+    lcb_wait(lInstance);
+  }
+  lDocNames->close();
+
+  return ItemSequence_t(new EmptySequence());  
+}
+
+/*******************************************************************************
+ ******************************************************************************/
 zorba::ItemSequence_t
 CreateViewFunction::evaluate(
   const Arguments_t& aArgs,

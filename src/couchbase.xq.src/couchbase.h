@@ -586,6 +586,25 @@ class CreateViewFunction : public CouchbaseFunction
                 const zorba::DynamicContext*) const;
 };
 
+/*******************************************************************************
+ ******************************************************************************/
+
+class DeleteViewFunction : public CouchbaseFunction
+{
+  public:
+    DeleteViewFunction(const CouchbaseModule* aModule)
+      : CouchbaseFunction(aModule) {}
+
+    virtual ~DeleteViewFunction(){}
+
+    virtual zorba::String
+      getLocalName() const { return "delete-view"; }
+
+    virtual zorba::ItemSequence_t
+      evaluate( const Arguments_t&,
+                const zorba::StaticContext*,
+                const zorba::DynamicContext*) const;
+};
 } /*namespace couchbase*/ } /*namespace zorba*/
 
 

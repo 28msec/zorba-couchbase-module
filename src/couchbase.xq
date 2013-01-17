@@ -469,3 +469,23 @@ declare %an:sequential function cb:create-view(
   $view-names as xs:string*,
   $options as object()*)
 as xs:string* external;
+
+
+(:~
+ : Delete a document/view.
+ 
+ : If the document doesn't exists, function does nothing. All the views hold in the
+ : Document are deleted, this function can't delete single views. 
+ :
+ : @param $db connection reference
+ : @param $doc-name name of the document to create.
+ :
+ : @error cb:LCB0002 if any error occurs in the communication with
+ :   the server.
+ :
+ : @return empty sequence.
+ :)
+declare %an:sequential function cb:delete-view(
+  $db as xs:anyURI,
+  $doc as xs:string*)
+as xs:string* external;
