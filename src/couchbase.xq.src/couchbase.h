@@ -86,16 +86,25 @@ class CouchbaseFunction : public ContextualExternalFunction
 
     } lcb_storage_type_t;
 
+    typedef enum
+    {
+      CB_WAIT_FALSE = 0x00,
+      CB_WAIT_PERSIST = 0x01,
+      CB_WAIT_REPLICATE = 0x02
+    } cb_wait_type_t;
+
     class ViewOptions
     {
       protected:
         String theEncoding;
         String thePath;
+        String theStaleOption;
+        String theLimitOption;
 
       public:
         std::unique_ptr<std::stringstream>* theStream;
 
-        ViewOptions() : theEncoding("UTF-8"), thePath("") { theStream = NULL; }
+        ViewOptions() : theEncoding("UTF-8"), thePath(""), theStaleOption(""), theLimitOption("") { theStream = NULL; }
 
         ViewOptions(String& aPath) : theEncoding("UTF-8"), thePath(aPath) {}
 
@@ -106,6 +115,8 @@ class CouchbaseFunction : public ContextualExternalFunction
         String getEncoding() { return theEncoding; }
 
         String getPath() { return thePath; }
+
+        String getPathOptions();
     };
 
     class GetOptions
@@ -137,17 +148,18 @@ class CouchbaseFunction : public ContextualExternalFunction
     class PutOptions
     {
       protected:
-        
         lcb_storage_t theOperation;
         lcb_storage_type_t theType;
         unsigned int theExpTime;
         String theEncoding;
+        cb_wait_type_t theWaitType;
+        bool theIsWaiting;
 
       public:
 
-        PutOptions() : theOperation(LCB_ADD), theType(LCB_JSON), theExpTime(0), theEncoding("") { }
+        PutOptions() : theOperation(LCB_ADD), theType(LCB_JSON), theExpTime(0), theEncoding(""), theWaitType(CB_WAIT_FALSE), theIsWaiting(false){ }
 
-        PutOptions(lcb_storage_type_t aType) : theOperation(LCB_SET), theType(aType), theExpTime(0) { }
+        PutOptions(lcb_storage_type_t aType) : theOperation(LCB_SET), theType(aType), theExpTime(0), theWaitType(CB_WAIT_FALSE), theIsWaiting(false) { }
 
         void setOptions(Item& aOptions);
 
@@ -160,6 +172,12 @@ class CouchbaseFunction : public ContextualExternalFunction
         unsigned int getExmpTime() { return theExpTime; }
 
         String getEncoding() { return theEncoding; }
+
+        cb_wait_type_t getWaitType() { return theWaitType; }
+
+        bool isWaiting() { return theIsWaiting; }
+
+        void setWaiting(bool isWaiting) { theIsWaiting = isWaiting; }
     };
 
     class ViewItemSequence : public ItemSequence
@@ -298,6 +316,14 @@ class CouchbaseFunction : public ContextualExternalFunction
 
     static void
       put (lcb_t aInstance, Iterator_t aKeys, Iterator_t aValues, PutOptions aOptions);
+
+    
+    static void
+      observe_callback(
+        lcb_t instance, 
+        const void *cookie,
+        lcb_error_t error,
+        const lcb_observe_resp_t *resp);
 
   public:
     
@@ -560,6 +586,25 @@ class CreateViewFunction : public CouchbaseFunction
                 const zorba::DynamicContext*) const;
 };
 
+/*******************************************************************************
+ ******************************************************************************/
+
+class DeleteViewFunction : public CouchbaseFunction
+{
+  public:
+    DeleteViewFunction(const CouchbaseModule* aModule)
+      : CouchbaseFunction(aModule) {}
+
+    virtual ~DeleteViewFunction(){}
+
+    virtual zorba::String
+      getLocalName() const { return "delete-view"; }
+
+    virtual zorba::ItemSequence_t
+      evaluate( const Arguments_t&,
+                const zorba::StaticContext*,
+                const zorba::DynamicContext*) const;
+};
 } /*namespace couchbase*/ } /*namespace zorba*/
 
 

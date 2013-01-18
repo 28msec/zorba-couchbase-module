@@ -89,6 +89,10 @@ zorba::ExternalFunction*
     {
       lFunc = new CreateViewFunction(this);
     }
+    else if (localname == "delete-view")
+    {
+      lFunc = new DeleteViewFunction(this);
+    }
   }
 
   return lFunc;
@@ -190,6 +194,30 @@ CouchbaseFunction::getInstance(const DynamicContext* aDctx, const String& aIdent
   return NULL;
 }
 
+String
+  CouchbaseFunction::ViewOptions::getPathOptions()
+{
+  String lPathOptions("?");
+  bool lAmp = false;
+  if (theStaleOption != "")
+  {
+    lPathOptions.append(theStaleOption);
+    lAmp = true;
+  }
+  if (theLimitOption != "")
+  {
+    if(lAmp)
+      lPathOptions.append("&");
+    lPathOptions.append(theLimitOption);
+    lAmp = true;
+  }
+
+  if (lPathOptions == "?")
+    lPathOptions = "";
+
+  return lPathOptions;
+}
+
 void
   CouchbaseFunction::ViewOptions::setOptions(Item& aOptions)
 {
@@ -215,6 +243,42 @@ void
         lMsg << theEncoding << ": unsupported encoding";
         throwError("CB0006", lMsg.str().c_str());
       }
+    }
+    else if (lStrKey == "stale")
+    {
+      Item lValue = aOptions.getObjectValue(lStrKey);
+      String lString = lValue.getStringValue();
+      if (lString == "false")
+      {
+        theStaleOption ="stale=false";
+      }
+      else if (lString == "ok")
+      {
+        theStaleOption ="stale=ok";
+      }
+      else if (lString == "update_after")
+      {
+        theStaleOption ="stale=update_after";
+      }
+      else
+      {
+        std::ostringstream lMsg;
+        lMsg << lStrKey << "=" << lString << ": option not supported";
+        throwError("CB0007", lMsg.str().c_str());
+      }
+    }
+    else if (lStrKey == "limit")
+    {
+      Item lValue = aOptions.getObjectValue(lStrKey);
+      try
+      {
+        int lLimit = lValue.getIntValue();
+        theLimitOption = "limit=" + lLimit;  
+      }
+      catch (ZorbaException& e)
+      {
+        throwError("CB0009", " limit option must be an integer value");
+      } 
     }
     else
     {
@@ -369,6 +433,28 @@ CouchbaseFunction::PutOptions::setOptions(Item& aOptions)
             std::ostringstream lMsg;
             lMsg << theEncoding << ": unsupported encoding";
             throwError("CB0006", lMsg.str().c_str());
+      }
+    }
+    else if (lStrKey == "wait")
+    {
+      Item lValue = aOptions.getObjectValue(lStrKey);
+      String lStrValue = lValue.getStringValue();
+      std::transform(
+        lStrValue.begin(), lStrValue.end(),
+        lStrValue.begin(), tolower);
+      if (lStrValue == "persist")
+      {
+        theWaitType = CB_WAIT_PERSIST;
+      }
+      else if (lStrValue == "false")
+      {
+        theWaitType = CB_WAIT_FALSE;
+      }
+      else
+      {
+        std::ostringstream lMsg;
+        lMsg << lStrKey << "=" << lStrValue << " : option not supported";
+        throwError("CB0007", lMsg.str().c_str());
       }
     }
     else
@@ -731,6 +817,26 @@ GetBinaryFunction::evaluate(
 /*******************************************************************************
  ******************************************************************************/
 
+void CouchbaseFunction::observe_callback(lcb_t instance, const void *cookie, lcb_error_t error, const lcb_observe_resp_t *resp)
+{
+  if (error != LCB_SUCCESS)
+  {
+    libCouchbaseError (instance, error);
+  }
+  
+  PutOptions* lWait = (PutOptions*) cookie;
+  //verify is coming from the master
+  if (resp->v.v0.from_master > 0)
+  {
+    lcb_observe_t lStatus = resp->v.v0.status;if (lStatus == LCB_OBSERVE_NOT_FOUND)
+    {
+      throwError("CB0011", "Variable stored not found.");
+    }
+    //check for flag of persisntancy
+    lWait->setWaiting(lStatus & LCB_OBSERVE_PERSISTED?false:true);
+  }
+}
+
 void CouchbaseFunction::put (lcb_t aInstance, Iterator_t aKeys, Iterator_t aValues, PutOptions aOptions)
 {
   lcb_error_t lError;
@@ -800,9 +906,23 @@ void CouchbaseFunction::put (lcb_t aInstance, Iterator_t aKeys, Iterator_t aValu
     {
       libCouchbaseError (aInstance, lError);
     } 
-
-
+    //Wait for store
     lcb_wait(aInstance);
+    //Check if wait for disk
+    if (aOptions.getWaitType() != CB_WAIT_FALSE)
+    {     
+      lcb_set_observe_callback(aInstance, observe_callback);
+      PutOptions* lOptions = &aOptions;
+      do {
+        lcb_observe_cmd_t lObserve;
+        lObserve.version = 0;
+        lObserve.v.v0.key = lStrKey.c_str();
+        lObserve.v.v0.nkey = lStrKey.size();
+        lcb_observe_cmd_t* lCommands[1] = { &lObserve };
+        lcb_observe(aInstance, lOptions, 1, lCommands);
+        lcb_wait(aInstance);
+      }while(lOptions->isWaiting());
+    }
   }
 
   if (aValues->next(lValue))
@@ -1005,19 +1125,23 @@ CouchbaseFunction::ViewItemSequence::ViewIterator::next(Item& aItem)
   if (thePaths->next(lPath))
   {
     ViewOptions* lOptions = &theOptions;
-    
+    String lPathOptions = lOptions->getPathOptions();
+    String lPathString = lPath.getStringValue();    
+    if (lPathOptions != "")
+    {
+      lPathString.append(lPathOptions);
+    }    
     lcb_http_request_t lReq;
     lcb_http_cmd_t lCmd;
     lCmd.version = 0;
-    lCmd.v.v0.path = lPath.getStringValue().c_str();
-    lCmd.v.v0.npath = lPath.getStringValue().size();
+    lCmd.v.v0.path = lPathString.c_str();
+    lCmd.v.v0.npath = lPathString.size();
     lCmd.v.v0.body = NULL;
     lCmd.v.v0.nbody = 0;
     lCmd.v.v0.method = LCB_HTTP_METHOD_GET;
     lCmd.v.v0.chunked = 1;
     lCmd.v.v0.content_type = "application/json";
     lcb_error_t err = lcb_make_http_request(theInstance, lOptions, LCB_HTTP_TYPE_VIEW, &lCmd, &lReq);
-  
     if (err != LCB_SUCCESS)
     {
       libCouchbaseError (theInstance, err);
@@ -1065,8 +1189,46 @@ ViewFunction::evaluate(
 
 /*******************************************************************************
  ******************************************************************************/
+zorba::ItemSequence_t
+DeleteViewFunction::evaluate(
+  const Arguments_t& aArgs,
+  const zorba::StaticContext* aSctx,
+  const zorba::DynamicContext* aDctx) const
+{
+  String lInstanceID = getOneStringArgument(aArgs, 0);
+  lcb_t lInstance = getInstance(aDctx, lInstanceID);
 
+  Iterator_t lDocNames = getIterArgument(aArgs, 1);
+  Item lDoc;  
+  lDocNames->open();
+  while(lDocNames->next(lDoc))
+  {
+    String lPath = "_design/" + lDoc.getStringValue();
+    lcb_http_request_t req;
+    lcb_http_cmd_t cmd;
+    cmd.version = 0;
+    cmd.v.v0.path = lPath.c_str();
+    cmd.v.v0.npath = lPath.size();
+    cmd.v.v0.body = NULL;
+    cmd.v.v0.nbody = 0;
+    cmd.v.v0.method = LCB_HTTP_METHOD_DELETE;
+    cmd.v.v0.chunked = false;
+    cmd.v.v0.content_type = "application/json";
+    lcb_error_t err = lcb_make_http_request(lInstance, NULL,
+                           LCB_HTTP_TYPE_VIEW, &cmd, &req);
 
+    if (err != LCB_SUCCESS)
+    libCouchbaseError (lInstance, err);
+
+    lcb_wait(lInstance);
+  }
+  lDocNames->close();
+
+  return ItemSequence_t(new EmptySequence());  
+}
+
+/*******************************************************************************
+ ******************************************************************************/
 zorba::ItemSequence_t
 CreateViewFunction::evaluate(
   const Arguments_t& aArgs,

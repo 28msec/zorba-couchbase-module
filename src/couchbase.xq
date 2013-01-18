@@ -232,7 +232,10 @@ as empty-sequence()
  : @option "operation" type of operation, possible values are 
  :         "add", "replace", "set", "append" and "prepend".
  : @option "encoding" the encoding that should be used for the
- :   value (default is UTF-8).
+ :         value (default is UTF-8).
+ : @option "wait" variable for setting if a wait for persistancy in 
+ :         the storing key is needed, possible values are "persist" 
+ :         and "false".
  : 
  : @error cb:LCB0002 if any error occurs in the communication with
  :   the server.
@@ -241,6 +244,7 @@ as empty-sequence()
  : @error cb:CB0006 if the given encoding is not supported.
  : @error cb:CB0007 if any of the options is not supported.
  : @error cb:CB0009 if the given expiration time is not an xs:integer. 
+ : @error cb:CB0011 if the stored Variable was not stored
  :
  : @return a empty sequence.
  :)  
@@ -286,6 +290,9 @@ as empty-sequence()
  :         expiration time in seconds.
  : @option "operation" type of operation, possible values are 
  :         "add", "replace", "set", "append" and "prepend".
+ : @option "wait" variable for setting if a wait for persistancy in 
+ :         the storing key is needed, possible values are "persist" 
+ :         and "false".
  :
  : @error cb:LCB0002 if any error occurs in the communication with
  :   the server.
@@ -293,6 +300,7 @@ as empty-sequence()
  :   of values.
  : @error cb:CB0007 if any of the options is not supported.
  : @error cb:CB0009 if the given expiration time is not an xs:integer.
+ : @error cb:CB0011 if the stored Variable was not stored
  :
  : @return a empty sequence.
  :)  
@@ -365,8 +373,18 @@ declare %fn:private %an:sequential function cb:view-text($db as xs:anyURI, $path
  :        (e.g. "_design/test/_view/vies").
  : @param $options JSONiq object with additional options
  :
- : @option "encoding" string with the name of the encoding of the returned
- :   strings (if not UTF-8).
+ : @option Json object whith options for the querying the view. available options:
+ :         "encoding" string with the name of the encoding of the returned
+ :         strings (if not UTF-8).
+ :         "stale" option's value is a string with the type of stale to be used. 
+ :         Valid values:
+ :           "ok" : the view is not updated
+ :           "false" : the view is updated before the function view is executed, 
+ :            this options needs the key to be on disk before the call of the 
+ :            view function.
+ :           "update_after" : the view is updated after the call of view
+ :         "limit" option's value is an integer which sets a number of how many 
+ :         rows the view will show.  
  :
  : @error cb:LCB0002 if any error occurs in the communication with
  :   the server.
@@ -450,4 +468,24 @@ declare %an:sequential function cb:create-view(
   $doc-name as xs:string,
   $view-names as xs:string*,
   $options as object()*)
+as xs:string* external;
+
+
+(:~
+ : Delete a document/view.
+ 
+ : If the document doesn't exists, function does nothing. All the views hold in the
+ : Document are deleted, this function can't delete single views. 
+ :
+ : @param $db connection reference
+ : @param $doc-name name of the document to create.
+ :
+ : @error cb:LCB0002 if any error occurs in the communication with
+ :   the server.
+ :
+ : @return empty sequence.
+ :)
+declare %an:sequential function cb:delete-view(
+  $db as xs:anyURI,
+  $doc as xs:string*)
 as xs:string* external;
