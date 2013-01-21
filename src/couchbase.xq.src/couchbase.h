@@ -571,6 +571,14 @@ class ViewFunction : public CouchbaseFunction
 
 class CreateViewFunction : public CouchbaseFunction
 {
+  private:
+    static void create_view_callback(
+      lcb_http_request_t request, 
+      lcb_t instance, 
+      const void* cookie, 
+      lcb_error_t error, 
+      const lcb_http_resp_t* resp);
+
   public:
     CreateViewFunction(const CouchbaseModule* aModule)
       : CouchbaseFunction(aModule) {}
@@ -591,6 +599,14 @@ class CreateViewFunction : public CouchbaseFunction
 
 class DeleteViewFunction : public CouchbaseFunction
 {
+  private:
+    static void delete_view_callback(
+      lcb_http_request_t request, 
+      lcb_t instance, 
+      const void* cookie, 
+      lcb_error_t error, 
+      const lcb_http_resp_t* resp);
+
   public:
     DeleteViewFunction(const CouchbaseModule* aModule)
       : CouchbaseFunction(aModule) {}

@@ -12,7 +12,6 @@ cb:put-text($instance, "view", '{ "view" : 1 }', { "wait" : "persist" });
 variable $cb-document := "test-view";
 variable $cb-view := "view";
 variable $view-name := cb:create-view($instance, $cb-document, $cb-view, {"key":"doc.view"});
-
 variable $data := cb:view($instance, $view-name, {"stale" : "false"});
 cb:delete-view($instance, $cb-document);
 for $d in jn:members($data("rows"))
