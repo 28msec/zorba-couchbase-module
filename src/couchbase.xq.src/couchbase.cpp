@@ -1189,6 +1189,27 @@ ViewFunction::evaluate(
 
 /*******************************************************************************
  ******************************************************************************/
+void DeleteViewFunction::delete_view_callback(lcb_http_request_t request, lcb_t instance, const void* cookie, lcb_error_t error, const lcb_http_resp_t* resp)
+{
+     if (resp->v.v0.status == 401)
+    {
+      std::ostringstream lMsg;
+      lMsg << "The item requested was not available using the supplied authorization, or authorization was not supplied.";
+      throwError("CB0012", lMsg.str().c_str());
+    } else if (resp->v.v0.status == 404)
+    {
+      std::ostringstream lMsg;
+      lMsg << "The requested content could not be found. The returned content will include further information, as a JSON object, if available.";
+      throwError("CB0012", lMsg.str().c_str());
+    }
+    else if (resp->v.v0.status > 400)
+    {
+      std::ostringstream lMsg;
+      lMsg << "HTTP communication with couchbase server throwed error " << (int)resp->v.v0.status << ".";
+      throwError("CB0012", lMsg.str().c_str());
+    }     
+}
+
 zorba::ItemSequence_t
 DeleteViewFunction::evaluate(
   const Arguments_t& aArgs,
@@ -1203,6 +1224,7 @@ DeleteViewFunction::evaluate(
   lDocNames->open();
   while(lDocNames->next(lDoc))
   {
+    lcb_set_http_complete_callback(lInstance, DeleteViewFunction::delete_view_callback);
     String lPath = "_design/" + lDoc.getStringValue();
     lcb_http_request_t req;
     lcb_http_cmd_t cmd;
@@ -1212,13 +1234,13 @@ DeleteViewFunction::evaluate(
     cmd.v.v0.body = NULL;
     cmd.v.v0.nbody = 0;
     cmd.v.v0.method = LCB_HTTP_METHOD_DELETE;
-    cmd.v.v0.chunked = false;
+    cmd.v.v0.chunked = 0;
     cmd.v.v0.content_type = "application/json";
     lcb_error_t err = lcb_make_http_request(lInstance, NULL,
                            LCB_HTTP_TYPE_VIEW, &cmd, &req);
 
     if (err != LCB_SUCCESS)
-    libCouchbaseError (lInstance, err);
+      libCouchbaseError (lInstance, err);
 
     lcb_wait(lInstance);
   }
@@ -1229,6 +1251,27 @@ DeleteViewFunction::evaluate(
 
 /*******************************************************************************
  ******************************************************************************/
+void CreateViewFunction::create_view_callback(lcb_http_request_t request, lcb_t instance, const void* cookie, lcb_error_t error, const lcb_http_resp_t* resp)
+{
+    if (resp->v.v0.status == 401)
+    {
+      std::ostringstream lMsg;
+      lMsg << "The item requested was not available using the supplied authorization, or authorization was not supplied.";
+      throwError("CB0012", lMsg.str().c_str());
+    } else if (resp->v.v0.status == 404)
+    {
+      std::ostringstream lMsg;
+      lMsg << "The requested content could not be found. The returned content will include further information, as a JSON object, if available.";
+      throwError("CB0012", lMsg.str().c_str());
+    }
+    else if (resp->v.v0.status > 400)
+    {
+      std::ostringstream lMsg;
+      lMsg << "HTTP communication with couchbase server throwed error " << (int)resp->v.v0.status << ".";
+      throwError("CB0012", lMsg.str().c_str());
+    }    
+}
+
 zorba::ItemSequence_t
 CreateViewFunction::evaluate(
   const Arguments_t& aArgs,
@@ -1396,7 +1439,7 @@ CreateViewFunction::evaluate(
     lViewNames->close();
     lBody += "}}";
   }
-
+  lcb_set_http_complete_callback(lInstance, CreateViewFunction::create_view_callback);
   lcb_http_request_t lReq;
   lcb_http_cmd_t lCmd;
   lCmd.v.v0.path = lPath.c_str();
