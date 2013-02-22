@@ -6,6 +6,6 @@ variable $instance := cb:connect({
   "password" : null,
   "bucket" : "default"});
 
-cb:put-text($instance, "key1", "foo");
-variable $result := cb:get-text($instance, "key1");
+cb:put-text($instance, "store", "foo");
+variable $result := cb:get-text($instance, "store");
 $result

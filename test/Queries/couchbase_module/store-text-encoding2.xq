@@ -6,8 +6,8 @@ variable $instance := cb:connect({
   "password" : null,
   "bucket" : "default"});
 
-cb:put-text($instance, "encoding", "äüö", { "encoding" : "ISO-8859-1" });
-variable $result := cb:get-text($instance, "encoding", { "encoding" : "UTF-8" });
+cb:put-text($instance, "encoding2", "äüö", { "encoding" : "ISO-8859-1" });
+variable $result := cb:get-text($instance, "encoding2", { "encoding" : "UTF-8" });
 if ($result = "äüö")
 then true()
 else false()
