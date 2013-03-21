@@ -3,8 +3,8 @@ import module namespace f = "http://expath.org/ns/file";
 
 variable $instance := cb:connect({
   "host": "localhost:8091",
-  "username" : null,
-  "password" : null,
+  "username" : jn:null(),
+  "password" : jn:null(),
   "bucket" : "default"});
 
 variable $binary := f:read-binary(resolve-uri("connect.xq"));
