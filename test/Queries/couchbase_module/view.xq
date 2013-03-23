@@ -6,12 +6,13 @@ variable $instance := cb:connect({
   "password" : jn:null(),
   "bucket" : "default"});
 
-cb:put-text($instance, "view", '{ "view" : 1 }');
+cb:remove($instance, "view");
+cb:put-text($instance, "view", '{ "view" : 1 }', { "wait" : "persist" });
 
-variable $view-name := cb:create-view($instance, "test-view", "test", {"key":"doc.view"});
-
-variable $data := cb:view($instance, $view-name);
+variable $cb-document := "dev_test_view";
+variable $cb-view := "view";
+variable $view-name := cb:create-view($instance, $cb-document, $cb-view, {"key":"doc.view"});
+variable $data := cb:view($instance, $view-name, {"stale" : "false"});
 for $d in jn:members($data("rows"))
 where $d neq jn:null() and $d("key") >0
 return $d
-

@@ -6,6 +6,6 @@ variable $instance := cb:connect({
   "password" : jn:null(),
   "bucket" : "default"});
 
-cb:put-text($instance, "key1", "foo", { "encoding" : "foo" });
-variable $result := cb:get-text($instance, "key1", { "encoding" : "UTF-8" });
+cb:put-text($instance, "store2", "foo", { "encoding" : "foo" });
+variable $result := cb:get-text($instance, "store2", { "encoding" : "UTF-8" });
 $result
