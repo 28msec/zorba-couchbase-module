@@ -12,6 +12,6 @@ variable $view-name := cb:create-view($instance, "test-view", "test", {"key":"do
 
 variable $data := cb:view($instance, $view-name);
 for $d in jn:members($data("rows"))
-where $d("key") >0
+where $d neq jn:null() and $d("key") >0
 return $d
 
