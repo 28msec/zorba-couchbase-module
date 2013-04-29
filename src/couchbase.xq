@@ -361,7 +361,7 @@ declare %an:sequential function cb:view($db as xs:anyURI, $path as xs:string*)
   jn:parse-json(cb:view-text($db, $path))
 };
 
-declare %fn:private %an:sequential function cb:view-text($db as xs:anyURI, $path as xs:string*)
+declare %private %an:sequential function cb:view-text($db as xs:anyURI, $path as xs:string*)
   as xs:string* external;
 
 
@@ -401,7 +401,7 @@ as object()*
   jn:parse-json(cb:view-text($db, $path, $options))
 };
 
-declare %fn:private %an:sequential function cb:view-text(
+declare %private %an:sequential function cb:view-text(
   $db as xs:anyURI,
   $path as xs:string*,
   $options as object())
