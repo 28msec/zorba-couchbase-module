@@ -15,23 +15,22 @@
  * limitations under the License.
  */
 
-#include <zorba/item_factory.h>
-#include <zorba/singleton_item_sequence.h>
-#include <zorba/empty_sequence.h>
-#include <zorba/store_manager.h>
-#include <zorba/user_exception.h>
-#include <zorba/transcode_stream.h>
-#include <zorba/serializer.h>
-#include <zorba/vector_item_sequence.h>
-#include <stdio.h>
-#include <iostream>
 #include <algorithm>
-
-
-#include <zorba/util/uuid.h>
-
+#include <cstdio>
+#include <iostream>
+#include <sstream>
 
 #include <libcouchbase/couchbase.h>
+
+#include <zorba/empty_sequence.h>
+#include <zorba/item_factory.h>
+#include <zorba/serializer.h>
+#include <zorba/singleton_item_sequence.h>
+#include <zorba/store_manager.h>
+#include <zorba/user_exception.h>
+#include <zorba/util/transcode_stream.h>
+#include <zorba/util/uuid.h>
+#include <zorba/vector_item_sequence.h>
 
 #include "couchbase.h"
 
