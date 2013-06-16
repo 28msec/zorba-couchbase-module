@@ -28,6 +28,7 @@ xquery version "3.0";
  : operations.
  :
  : @author Juan Zacarias
+ : @project DB Drivers/Couchbase
  :
  :)
 module namespace cb = "http://www.zorba-xquery.com/modules/couchbase";
