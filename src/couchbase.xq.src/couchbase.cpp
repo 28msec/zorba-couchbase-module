@@ -708,7 +708,7 @@ CouchbaseFunction::GetItemSequence::get_callback(lcb_t instance, const void *coo
     //unsigned char lData[resp->v.v0.nbytes];
     //size_t lLen = resp->v.v0.nbytes;
     //memcpy(lData, resp->v.v0.bytes, lLen);
-    lRes->theItem = CouchbaseModule::getItemFactory()->createBase64Binary((const unsigned char*)resp->v.v0.bytes, resp->v.v0.nbytes);
+    lRes->theItem = CouchbaseModule::getItemFactory()->createBase64Binary(resp->v.v0.bytes, resp->v.v0.nbytes, false);
   }
   else
   {
