@@ -30,21 +30,22 @@ ELSE(SKIP_COUCHBASE_DOWNLOAD)
 ENDIF(SKIP_COUCHBASE_DOWNLOAD)
 
 #Couchbase Configure
-  #Check what version of couchbase server to download
-  IF(system)
-    SET(DOWNLOAD_PATH "http://packages.couchbase.com/releases/2.0.0-beta")
-    IF (${system} STREQUAL "ubuntu32")
-      SET(COUCHBASE_DEB_NAME "couchbase-server-community_x86_2.0.0-beta.deb")
-    ELSE (${system} STREQUAL "ubuntu32")
-      IF (${system} STREQUAL "ubuntu64")
-        SET(COUCHBASE_DEB_NAME "couchbase-server-community_x86_64_2.0.0-beta.deb")
-      ELSE (${system} STREQUAL "ubuntu64")
-        MESSAGE(FATAL_ERROR "Invalid value for system (available values ubuntu32 and ubuntu64")
-      ENDIF (${system} STREQUAL "ubuntu64")
-    ENDIF (${system} STREQUAL "ubuntu32")  
-  ELSE(system)
-    MESSAGE(FATAL_ERROR "the variable 'system' must be set")
-  ENDIF(system)
+#Check what version of couchbase server to download
+SET (COUCHBASE_VER "2.0.1")
+IF(system)
+  SET(DOWNLOAD_PATH "http://packages.couchbase.com/releases/${COUCHBASE_VER}")
+  IF (${system} STREQUAL "ubuntu32")
+    SET(COUCHBASE_DEB_NAME
+      "couchbase-server-enterprise_x86_${COUCHBASE_VER}.deb")
+  ELSEIF (${system} STREQUAL "ubuntu64")
+    SET(COUCHBASE_DEB_NAME
+      "couchbase-server-enterprise_x86_64_${COUCHBASE_VER}.deb")
+  ELSE (${system} STREQUAL "ubuntu32")
+    MESSAGE(FATAL_ERROR "Invalid value for system (available values ubuntu32 and ubuntu64")
+  ENDIF (${system} STREQUAL "ubuntu32")  
+ELSE(system)
+  MESSAGE(FATAL_ERROR "the variable 'system' must be set")
+ENDIF(system)
 
 #Couchbase Download
 IF(COUCHBASE_DOWNLOAD)
@@ -59,12 +60,12 @@ ENDIF(COUCHBASE_DOWNLOAD)
 
 #Couchbase Install
 MESSAGE(STATUS "Installing Couchbase Server...")
+EXECUTE_PROCESS(COMMAND sudo apt-get install libssl0.9.8)
 EXECUTE_PROCESS(COMMAND sudo dpkg -i ${COUCHBASE_DEB_NAME})
-EXECUTE_PROCESS(COMMAND sudo apt-get install -f)
 
 #Couchbase C SDK Install
 MESSAGE(STATUS "Installing Couchbase C SDK...")
-EXECUTE_PROCESS(COMMAND sudo "${WGET}" -O/etc/apt/sources.list.d/couchbase.list http://packages.couchbase.com/ubuntu/couchbase-ubuntu1110.list)
+EXECUTE_PROCESS(COMMAND sudo "${WGET}" -O/etc/apt/sources.list.d/couchbase.list http://packages.couchbase.com/ubuntu/couchbase-ubuntu1204.list)
 EXECUTE_PROCESS(COMMAND "${WGET}" -O- http://packages.couchbase.com/ubuntu/couchbase.key
   COMMAND sudo apt-key add -)
 EXECUTE_PROCESS(COMMAND apt-get update)
