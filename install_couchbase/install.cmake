@@ -30,21 +30,22 @@ ELSE(SKIP_COUCHBASE_DOWNLOAD)
 ENDIF(SKIP_COUCHBASE_DOWNLOAD)
 
 #Couchbase Configure
-  #Check what version of couchbase server to download
-  IF(system)
-    SET(DOWNLOAD_PATH "http://packages.couchbase.com/releases/2.0.0-beta")
-    IF (${system} STREQUAL "ubuntu32")
-      SET(COUCHBASE_DEB_NAME "couchbase-server-community_x86_2.0.0-beta.deb")
-    ELSE (${system} STREQUAL "ubuntu32")
-      IF (${system} STREQUAL "ubuntu64")
-        SET(COUCHBASE_DEB_NAME "couchbase-server-community_x86_64_2.0.0-beta.deb")
-      ELSE (${system} STREQUAL "ubuntu64")
-        MESSAGE(FATAL_ERROR "Invalid value for system (available values ubuntu32 and ubuntu64")
-      ENDIF (${system} STREQUAL "ubuntu64")
-    ENDIF (${system} STREQUAL "ubuntu32")  
-  ELSE(system)
-    MESSAGE(FATAL_ERROR "the variable 'system' must be set")
-  ENDIF(system)
+#Check what version of couchbase server to download
+SET (COUCHBASE_VER "2.0.1")
+IF(system)
+  SET(DOWNLOAD_PATH "http://packages.couchbase.com/releases/${COUCHBASE_VER}")
+  IF (${system} STREQUAL "ubuntu32")
+    SET(COUCHBASE_DEB_NAME
+      "couchbase-server-community_x86_${COUCHBASE_VER}.deb")
+  ELSEIF (${system} STREQUAL "ubuntu64")
+    SET(COUCHBASE_DEB_NAME
+      "couchbase-server-community_x86_64_${COUCHBASE_VER}.deb")
+  ELSE (${system} STREQUAL "ubuntu32")
+    MESSAGE(FATAL_ERROR "Invalid value for system (available values ubuntu32 and ubuntu64")
+  ENDIF (${system} STREQUAL "ubuntu32")  
+ELSE(system)
+  MESSAGE(FATAL_ERROR "the variable 'system' must be set")
+ENDIF(system)
 
 #Couchbase Download
 IF(COUCHBASE_DOWNLOAD)
@@ -59,16 +60,16 @@ ENDIF(COUCHBASE_DOWNLOAD)
 
 #Couchbase Install
 MESSAGE(STATUS "Installing Couchbase Server...")
+EXECUTE_PROCESS(COMMAND sudo apt-get install libssl0.9.8)
 EXECUTE_PROCESS(COMMAND sudo dpkg -i ${COUCHBASE_DEB_NAME})
-EXECUTE_PROCESS(COMMAND sudo apt-get install -f)
 
 #Couchbase C SDK Install
 MESSAGE(STATUS "Installing Couchbase C SDK...")
-EXECUTE_PROCESS(COMMAND sudo "${WGET}" -O/etc/apt/sources.list.d/couchbase.list http://packages.couchbase.com/ubuntu/couchbase-ubuntu1110.list)
+EXECUTE_PROCESS(COMMAND sudo "${WGET}" -O/etc/apt/sources.list.d/couchbase.list http://packages.couchbase.com/ubuntu/couchbase-ubuntu1204.list)
 EXECUTE_PROCESS(COMMAND "${WGET}" -O- http://packages.couchbase.com/ubuntu/couchbase.key
   COMMAND sudo apt-key add -)
-EXECUTE_PROCESS(COMMAND apt-get update)
-EXECUTE_PROCESS(COMMAND apt-get install libcouchbase2 libcouchbase-dev)
+EXECUTE_PROCESS(COMMAND sudo apt-get update)
+EXECUTE_PROCESS(COMMAND sudo apt-get install libcouchbase2 libcouchbase-dev)
 
 #Couchbase Setup
 MESSAGE(STATUS "Starting Setup...")
@@ -76,7 +77,7 @@ MESSAGE(STATUS "Running node-init...")
 EXECUTE_PROCESS(COMMAND /opt/couchbase/bin/couchbase-cli node-init -c 127.0.0.1 --node-init-data-path=/opt/couchbase/var/lib/couchbase/data/ -u admin -p password)
 MESSAGE(STATUS "Running cluster-init...")
 EXECUTE_PROCESS(COMMAND /opt/couchbase/bin/couchbase-cli cluster-init -c 127.0.0.1 --cluster-init-ramsize=2048 -u admin -p password)
-MESSAGE(STATUS "Running create-bucket...")
+MESSAGE(STATUS "Running bucket-create...")
 EXECUTE_PROCESS(COMMAND /opt/couchbase/bin/couchbase-cli bucket-create -c 127.0.0.1 --bucket=default --bucket-type=couchbase --bucket-port=11211 --bucket-ramsize=200 --bucket-replica=1 -u admin -p password)
 MESSAGE(STATUS "Couchbase Server Configure for testing, Username=admin Password=password bucket-name=default")
 EXECUTE_PROCESS(COMMAND rm ${COUCHBASE_DEB_NAME})
