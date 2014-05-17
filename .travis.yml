@@ -1,4 +1,4 @@
-nguage: cpp
+language: cpp
 before_script:
   - gpg --keyserver pgpkeys.mit.edu --recv-key  A3FAA648D9223EDA
   - gpg -a --export A3FAA648D9223EDA | sudo apt-key add -
@@ -6,3 +6,4 @@ before_script:
   - sudo apt-get update -qq
   - sudo apt-get install libicu-dev libxml2-dev uuid-dev libxerces-c-dev libcouchbase-dev
 script: cd ../.. && wget https://github.com/28msec/zorba/archive/master.zip && unzip -qq master.zip -d . && cd zorba-master && mkdir build && cd build && cmake -DZORBA_MODULES_DIR=/home/travis/build/28msec .. && make -j2 && ctest -R couchbase
+cache: apt
