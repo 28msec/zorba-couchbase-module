@@ -12,21 +12,21 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-IF (LIBCOUCHBASE_INCLUDE_DIR)
-  SET (LIBCOUCHBASE_FIND_QUIETLY TRUE)
-ENDIF (LIBCOUCHBASE_INCLUDE_DIR)
-
+MESSAGE (STATUS "Looking for include file libcouchbase/couchbase.h")
 FIND_PATH (
   LIBCOUCHBASE_INCLUDE_DIR
   libcouchbase/couchbase.h
   PATHS /opt/local/include)
 MARK_AS_ADVANCED (LIBCOUCHBASE_INCLUDE_DIR)
+MESSAGE (STATUS "Include path: ${LIBCOUCHBASE_INCLUDE_DIR}")
 
+MESSAGE (STATUS "Looking for libary file couchbase/libcouchbase")
 FIND_LIBRARY (
   LIBCOUCHBASE_LIBRARY
-  NAMES couchbase
+  NAMES couchbase libcouchbase
   PATHS /opt/local/lib)
 MARK_AS_ADVANCED (LIBCOUCHBASE_LIBRARY)
+MESSAGE (STATUS "Library path: ${LIBCOUCHBASE_INCLUDE_DIR}")
 
 IF (LIBCOUCHBASE_INCLUDE_DIR AND LIBCOUCHBASE_LIBRARY)
   SET (LIBCOUCHBASE_FOUND 1)
