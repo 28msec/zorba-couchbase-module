@@ -12,6 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+MESSAGE(STATUS "")
+MESSAGE(STATUS "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
+MESSAGE(STATUS "Configuring external module <couchbase>")
+MESSAGE(STATUS "-------------------------------------------------------------")
+MESSAGE(STATUS "")
+
 CMAKE_MINIMUM_REQUIRED(VERSION 2.6)
 
 PROJECT (zorba_couchbase_module)
@@ -35,8 +41,12 @@ INCLUDE ("${Zorba_USE_FILE}")
 
 IF (ZORBA_SUPPRESS_LIBCOUCHBASE)
   MESSAGE (STATUS "ZORBA_SUPRESS_COUCHBASE is true - not searching for LibCouchbase.")
-ELSE (ZORBA_SUPRESS_LIBCOUCHBASE)
   
+  MESSAGE(STATUS "")
+  MESSAGE(STATUS "-------------------------------------------------------------")  
+  MESSAGE(STATUS "Configuration SUPPRESSED for external module <couchbase>")
+  
+ELSE (ZORBA_SUPRESS_LIBCOUCHBASE)
   MESSAGE (STATUS "Looking for LibCouchbase")
   FIND_PACKAGE ("LibCouchbase")
 
@@ -46,9 +56,21 @@ ELSE (ZORBA_SUPRESS_LIBCOUCHBASE)
 
     ADD_SUBDIRECTORY("src")
     ADD_TEST_DIRECTORY("${PROJECT_SOURCE_DIR}/test")
+    
+    MESSAGE(STATUS "")
+    MESSAGE(STATUS "-------------------------------------------------------------")
+    MESSAGE(STATUS "Configuration SUCCEEDED for external module <couchbase>")
+    
   ELSE (LIBCOUCHBASE_FOUND)
     MESSAGE (STATUS "LibCouchbase library not found; couchbase module skipped")
+    
+    MESSAGE(STATUS "")
+    MESSAGE(STATUS "-------------------------------------------------------------")  
+    MESSAGE(STATUS "Configuration FAILED for external module <couchbase>")
+    
   ENDIF (LIBCOUCHBASE_FOUND)
 ENDIF (ZORBA_SUPPRESS_LIBCOUCHBASE)
 
 DONE_DECLARING_ZORBA_URIS()
+
+MESSAGE(STATUS "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
